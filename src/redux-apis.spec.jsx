@@ -80,6 +80,47 @@ describe('redux-apis', () => {
 			it('should be overidden to handle actions', () => {
 			});
 		});
+
+		describe('createAction', () => {
+			it('is a function available on instances of Api', () => {
+				class MyApi extends Api {};
+				const myApi = new MyApi();
+				expect(myApi.createAction).to.be.a('function');
+			});
+
+			it('creates an action based on the given action type and optional payload', () => {
+				class MyApi extends Api {};
+				const myApi = new MyApi();
+				let action = myApi.createAction('TEST');
+				expect(action).to.not.equal(undefined);
+				expect(action).to.have.a.property('type');
+				expect(action.type).to.equal('TEST');
+				expect(action.payload).to.equal(undefined);
+				const payload = {some: {pay:'load'}};
+				action = myApi.createAction('TEST_WITH_PAYLOAD', payload);
+				expect(action.type).to.equal('TEST_WITH_PAYLOAD');
+				expect(action.payload).to.equal(payload);
+			});
+		});
+
+		describe('dispatch', () => {
+			it('is a function available on instances of Api', () => {
+				class MyApi extends Api {};
+				const myApi = new MyApi();
+				expect(myApi.dispatch).to.be.a('function');
+			});
+
+			it('dispatches an action to the root of the Api tree', () => {
+			});
+		});
+
+		describe('execute', () => {
+			it('is a function available on instances of Api', () => {
+				class MyApi extends Api {};
+				const myApi = new MyApi();
+				expect(myApi.execute).to.be.a('function');
+			});
+		});
 	});
 
 	describe('createReducer', () => {
