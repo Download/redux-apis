@@ -16,8 +16,22 @@
     "redux",
     "apis"
   ],
-  "author": "Stijn de Witt",
+  "author": {
+    "name": "Stijn de Witt",
+    "email": "StijnDeWitt@hotmail.com",
+    "url": "http://StijnDeWitt.com"
+  },
+  "copyright": "Copyright 2015 by [Stijn de Witt](http://StijnDeWitt.com). Some rights reserved.",
   "license": "CC-BY-4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/download/redux-apis.git"
+  },
+  "bugs": {
+    "url": "https://github.com/download/redux-apis/issues"
+  },
+  "homepage": "http://github.com/download/redux-apis",
   "devDependencies": {
     "babel-core": "^6.3.26",
     "babel-preset-es2015": "^6.3.13",
