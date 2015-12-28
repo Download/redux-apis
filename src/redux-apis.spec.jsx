@@ -1,6 +1,6 @@
 ﻿import { expect } from 'chai';
 import { createStore } from 'redux';
-import Api, { createReducer, bind } from './redux-apis';
+import Api, { createReducer, bind } from '../lib/redux-apis';
 
 describe('redux-apis', () => {
 	it('provides helpers to build redux-aware API\'s', () => {});
