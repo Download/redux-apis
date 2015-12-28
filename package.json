@@ -1,0 +1,33 @@
+{
+  "name": "redux-apis",
+  "version": "0.1.0",
+  "description": "Helpers to create Redux-aware API's",
+  "babel": {
+    "presets": [
+      "es2015",
+      "stage-0"
+    ]
+  },
+  "main": "src/redux-apis.jsx",
+  "scripts": {
+    "test": "mocha --require babel-register src/**/*spec.jsx"
+  },
+  "keywords": [
+    "redux",
+    "apis"
+  ],
+  "author": "Stijn de Witt",
+  "license": "CC-BY-4.0",
+  "devDependencies": {
+    "babel-core": "^6.3.26",
+    "babel-preset-es2015": "^6.3.13",
+    "babel-preset-stage-0": "^6.3.13",
+    "babel-register": "^6.3.13",
+    "chai": "^3.4.1",
+    "mocha": "^2.3.4",
+    "redux": "^3.0.5"
+  },
+  "dependencies": {
+    "redux-actions": "^0.9.0"
+  }
+}
