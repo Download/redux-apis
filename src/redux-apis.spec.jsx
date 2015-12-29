@@ -142,7 +142,13 @@ describe('redux-apis', () => {
 		});
 
 		it('accepts an instance of Api and a store and binds the store to the instance', () => {
-			class MyApi extends Api {};
+			class MyNestedApi extends Api {};
+			class MyApi extends Api {
+				constructor() {
+					super();
+					this.sub('nested', MyNestedApi);
+				}
+			};
 			const instance = new MyApi();
 			const reducer = createReducer(instance);
 			const store = createStore(reducer);

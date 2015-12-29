@@ -6,7 +6,7 @@ export default class Api {
 			get: function() {
 				if (this.parent) {
 					const name = childName(this.parent, this);
-					return this.parent.state[name];
+					return this.parent.state && this.parent.state[name];
 				}
 				if (this.store) {
 					return this.store.getState();
@@ -56,7 +56,7 @@ export default class Api {
 			if (key != 'parent' && this[key] instanceof Api) {
 				let act = key !== sub ? action : { ...action, type: action.type.substring(idx + 1) };
 				let subState = this[key].execute(act);
-				if (this.state[key] !== subState) {
+				if (!this.state || this.state[key] !== subState) {
 					result ? result[key] = subState : result = { ...this.state, [key]: subState };
 				}
 			}
