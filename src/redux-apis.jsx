@@ -6,10 +6,11 @@ export default class Api {
 			get: function() {
 				if (this.parent) {
 					const name = childName(this.parent, this);
-					return this.parent.state && this.parent.state[name];
+					return name ? this.parent.state && this.parent.state[name] : this.parent.state;
 				}
 				if (this.store) {
-					return this.store.getState();
+					var result = this.store.getState();
+					return result;
 				}
 				return state;
 			},
@@ -27,23 +28,18 @@ export default class Api {
 	}
 
 	createAction(actionType, payload, ...args) {
-		const name = this.parent && childName(this.parent, this);
+		let name = childName(this.parent, this);
 		if (name) {
 			return this.parent.createAction(name + '/' + actionType, payload, ...args);
-		} else {
-			return createAction(actionType)(payload, ...args);
 		}
+		return createAction(actionType)(payload, ...args);
 	}
 
 	dispatch(action) {
-		if (this.parent) {
-			this.parent.dispatch(action);
-		} else if (this.store) {
-			this.store.dispatch(action);
-		} else {
-			// root, but not connected to store, exec directly
-			this.state = this.execute(action);
-		}
+		if (this.parent) {return this.parent.dispatch(action);}
+		if (this.store) {return this.store.dispatch(action);}
+		// root, but not connected to store, exec directly
+		return this.state = this.execute(action);
 	}
 
 	execute(action) {
@@ -69,20 +65,29 @@ export default class Api {
 	}
 }
 
-export function createReducer(instance) {
-	return (state, action) => {
-		return instance.execute(action);
+export class RootApi extends Api {
+	constructor() {
+		super();
+		this.reducer = this.reducer.bind(this);
+	}
+
+	bind(api, store) {
+		this.api = new api();
+		this.api.parent = this;
+		this.store = store;
+	}
+
+	reducer(state, action) {
+		return this.api ? this.api.execute(action) : {};
 	}
 }
 
-export function bind(instance, store) {
-	instance.store = store;
-}
-
 function childName(parent, child) {
-	const siblings = Object.keys(parent);
-	for (let i=0,name; name=siblings[i]; i++) {
-		if (parent[name] === child) {return name;}
+	if (parent && (! (parent instanceof RootApi))) {
+		const siblings = Object.keys(parent);
+		for (let i=0,name; name=siblings[i]; i++) {
+			if (parent[name] === child) {return name;}
+		}
 	}
 }
 

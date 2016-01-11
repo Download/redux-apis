@@ -1,6 +1,6 @@
 ﻿import { expect } from 'chai';
 import { createStore } from 'redux';
-import Api, { createReducer, bind } from '../lib/redux-apis';
+import Api, { RootApi } from './redux-apis';
 
 describe('redux-apis', () => {
 	it('provides helpers to build redux-aware API\'s', () => {});
@@ -76,9 +76,6 @@ describe('redux-apis', () => {
 				myApi.dispatch(myApi.createAction('TEST'));
 				expect(called).to.equal(true);
 			});
-
-			it('should be overidden to handle actions', () => {
-			});
 		});
 
 		describe('createAction', () => {
@@ -123,40 +120,51 @@ describe('redux-apis', () => {
 		});
 	});
 
-	describe('createReducer', () => {
-		it('is a function', () => {
-			expect(createReducer).to.be.a('function');
+	describe('RootApi', () => {
+		it('is a class that binds a Redux store to an Api', () => {
+			expect(RootApi).to.not.equal(null);
+			expect(RootApi).to.be.a('function');
 		});
 
-		it('accepts an instance of Api and returns a reducer function', () => {
-			class MyApi extends Api {};
-			const instance = new MyApi();
-			const reducer = createReducer(instance);
-			expect(reducer).to.be.a('function');
-		});
-	});
-
-	describe('bind', () => {
-		it('is a function', () => {
-			expect(bind).to.be.a('function');
+		describe('constructor', () => {
+			it('creates a new, unbound root api object', () => {
+				let root = new RootApi();
+				expect(root).to.not.equal(null);
+				expect(root).to.be.an.instanceOf(RootApi);
+			});
 		});
 
-		it('accepts an instance of Api and a store and binds the store to the instance', () => {
-			class MyNestedApi extends Api {};
-			class MyApi extends Api {
-				constructor() {
-					super();
-					this.sub('nested', MyNestedApi);
-				}
-			};
-			const instance = new MyApi();
-			const reducer = createReducer(instance);
-			const store = createStore(reducer);
-			bind(instance, store);
-			expect(instance).to.have.a.property('store');
-			expect(instance.store).to.have.a.property('getState');
-			expect(instance.store.getState).to.be.a('function');
-			expect(instance.store.getState()).to.equal(instance.state);
+		describe('reducer', () => {
+			it('is a root reducer function that can be used to create a Redux store', () => {
+				let root = new RootApi();
+				expect(root).to.have.a.property('reducer');
+				expect(root.reducer).to.be.a('function');
+				let store = createStore(root.reducer);
+				expect(store).to.not.equal(null);
+				expect(store).to.have.a.property('getState');
+				expect(store.getState).to.be.a('function');
+			});
+		});
+
+		describe('bind', () => {
+			it('binds an Api to a Redux store', () => {
+				let root = new RootApi();
+				expect(root).to.have.a.property('bind');
+				expect(root.bind).to.be.a('function');
+				let store = createStore(root.reducer);
+				class MyApi extends Api {};
+				root.bind(MyApi, store);
+				expect(root).to.have.a.property('api');
+				expect(root.api).to.be.an.instanceOf(MyApi);
+				expect(root.api).to.have.a.property('parent');
+				expect(root.api.parent).to.equal(root);
+				expect(root).to.have.a.property('store');
+				expect(root.store).to.equal(store);
+				expect(root.api).to.have.a.property('state');
+				var state = root.api.state;
+				var storeState = store.getState();
+				expect(state).to.equal(storeState);
+			});
 		});
 	});
 });
