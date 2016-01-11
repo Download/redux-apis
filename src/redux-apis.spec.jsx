@@ -121,14 +121,16 @@ describe('redux-apis', () => {
 	});
 
 	describe('RootApi', () => {
+		class MyApi extends Api {};
+
 		it('is a class that binds a Redux store to an Api', () => {
 			expect(RootApi).to.not.equal(null);
 			expect(RootApi).to.be.a('function');
 		});
 
 		describe('constructor', () => {
-			it('creates a new, unbound root api object', () => {
-				let root = new RootApi();
+			it('Accepts an Api constructor and creates a new, unbound root api object', () => {
+				let root = new RootApi(MyApi);
 				expect(root).to.not.equal(null);
 				expect(root).to.be.an.instanceOf(RootApi);
 			});
@@ -136,7 +138,7 @@ describe('redux-apis', () => {
 
 		describe('reducer', () => {
 			it('is a root reducer function that can be used to create a Redux store', () => {
-				let root = new RootApi();
+				let root = new RootApi(MyApi);
 				expect(root).to.have.a.property('reducer');
 				expect(root.reducer).to.be.a('function');
 				let store = createStore(root.reducer);
@@ -147,13 +149,12 @@ describe('redux-apis', () => {
 		});
 
 		describe('bind', () => {
-			it('binds an Api to a Redux store', () => {
-				let root = new RootApi();
+			it('binds a Redux store and optionally an Api to this RootApi', () => {
+				let root = new RootApi(MyApi);
 				expect(root).to.have.a.property('bind');
 				expect(root.bind).to.be.a('function');
 				let store = createStore(root.reducer);
-				class MyApi extends Api {};
-				root.bind(MyApi, store);
+				root.bind(store);
 				expect(root).to.have.a.property('api');
 				expect(root.api).to.be.an.instanceOf(MyApi);
 				expect(root.api).to.have.a.property('parent');

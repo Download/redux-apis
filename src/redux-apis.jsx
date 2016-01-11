@@ -66,19 +66,23 @@ export default class Api {
 }
 
 export class RootApi extends Api {
-	constructor() {
+	constructor(api) {
 		super();
+		this.api = new api();
+		this.api.parent = this;
 		this.reducer = this.reducer.bind(this);
 	}
 
-	bind(api, store) {
-		this.api = new api();
-		this.api.parent = this;
+	bind(store, api) {
 		this.store = store;
+		if (api) {
+			this.api = new api();
+			this.api.parent = this;
+		}
 	}
 
 	reducer(state, action) {
-		return this.api ? this.api.execute(action) : {};
+		return this.api.execute(action);
 	}
 }
 
