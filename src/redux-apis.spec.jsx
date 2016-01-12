@@ -25,6 +25,8 @@ describe('redux-apis', () => {
 					}
 				};
 				const myApi = new MyApi();
+				expect(myApi).to.have.a.property('nested');
+				expect(myApi.nested).to.be.an.instanceOf(SubApi);
 			});
 		});
 
@@ -53,6 +55,21 @@ describe('redux-apis', () => {
 			});
 		});
 
+		describe('addHandler', () => {
+			it('is a function available on instances of Api', () => {
+				class MyApi extends Api {};
+				const myApi = new MyApi();
+				expect(myApi.addHandler).to.be.a('function');
+			});
+
+			it('accepts an action type and a handler function', () => {
+				class MyApi extends Api {};
+				const myApi = new MyApi();
+				myApi.addHandler('TEST', function(){});
+				expect(myApi.__handlers['TEST']).to.be.a('function');
+			});
+		});
+
 		describe('handle', () => {
 			it('is a function available on instances of Api', () => {
 				class MyApi extends Api {};
@@ -73,30 +90,109 @@ describe('redux-apis', () => {
 				};
 				const myApi = new MyApi();
 				expect(called).to.equal(false);
-				myApi.dispatch(myApi.createAction('TEST'));
+				myApi.dispatch(myApi.createAction('TEST')());
 				expect(called).to.equal(true);
 			});
+
+			it('looks for an action handler for the action and invokes it if found', () => {
+				let handlerCalled = false;
+				class MyApi extends Api {
+					constructor(state) {
+						super(state);
+						this.addHandler('CALL', function(action) {
+							handlerCalled = true;
+							return { msg:action.payload, ...this.state };
+						});
+					}
+					call(msg) {
+						this.dispatch(this.createAction('CALL')(msg));
+					}
+				};
+				let myApi = new MyApi();
+				expect(myApi.state).to.equal(undefined);
+				myApi.call('Some message');
+				expect(handlerCalled).to.equal(true);
+				expect(myApi.state).to.not.equal(undefined);
+				expect(myApi.state).to.have.a.property('msg');
+				expect(myApi.state.msg).to.equal('Some message');
+			})
+
+			it('invokes `initialState` if no handler exists and current state is undefined', () => {
+				class MyApi extends Api {
+					initialState() {
+						return { msg: 'Hello, World!' };
+					}
+				};
+				let myApi = new MyApi();
+				expect(myApi.state).to.equal(undefined);
+				myApi.dispatch(myApi.createAction('SOME_ACTION')({ some: 'payload' }));
+				expect(myApi.state).to.not.equal(undefined);
+				expect(myApi.state).to.have.a.property('msg');
+				expect(myApi.state.msg).to.equal('Hello, World!');
+			})
+
+			it('does not invoke `initialState` if current state is already defined', () => {
+				let initialStateCalled = 0;
+				class MyApi extends Api {
+					initialState() {
+						initialStateCalled++;
+						return { msg: 'Hello, World!' };
+					}
+				};
+				let myApi = new MyApi();
+				expect(initialStateCalled).to.equal(0);
+				myApi.dispatch(myApi.createAction('SOME_ACTION')({ some: 'payload' }));
+				expect(initialStateCalled).to.equal(1);
+				myApi.dispatch(myApi.createAction('SOME_ACTION')({ some: 'payload' }));
+				expect(initialStateCalled).to.equal(1);
+			})
 		});
 
 		describe('createAction', () => {
+			class MyApi extends Api {};
+			class MyComplexApi extends Api {
+				constructor(...args) {
+					super(...args);
+					this.sub('nested', MyApi);
+				}
+			}
+			const myApi = new MyApi();
+			const myComplexApi = new MyComplexApi();
+
 			it('is a function available on instances of Api', () => {
-				class MyApi extends Api {};
-				const myApi = new MyApi();
 				expect(myApi.createAction).to.be.a('function');
+				expect(myComplexApi.createAction).to.be.a('function');
 			});
 
-			it('creates an action based on the given action type and optional payload', () => {
-				class MyApi extends Api {};
-				const myApi = new MyApi();
-				let action = myApi.createAction('TEST');
-				expect(action).to.not.equal(undefined);
+			it('creates a function that will create actions of the given action type', () => {
+				let test = myApi.createAction('TEST');
+				expect(test).to.not.equal(undefined);
+				expect(test).to.be.a('function');
+				let action = test({my: 'action'});
+				expect(action).to.be.an('object');
 				expect(action).to.have.a.property('type');
 				expect(action.type).to.equal('TEST');
-				expect(action.payload).to.equal(undefined);
-				const payload = {some: {pay:'load'}};
-				action = myApi.createAction('TEST_WITH_PAYLOAD', payload);
-				expect(action.type).to.equal('TEST_WITH_PAYLOAD');
-				expect(action.payload).to.equal(payload);
+				expect(action).to.have.a.property('payload');
+				expect(action.payload).to.be.an('object');
+				expect(action.payload).to.have.a.property('my');
+				expect(action.payload.my).to.equal('action');
+			});
+
+			it('applies namespaces to the action type based on the Api hierarchy', () => {
+				let test = myComplexApi.nested.createAction('TEST');
+				let action = test({my: 'action'});
+				expect(action.type).to.equal('nested/TEST');
+			});
+
+ 			it('accepts optional actionCreator and metaCreator functions', () => {
+				let actionCreatorCalled = false;
+				function actionCreator(...args) {actionCreatorCalled = true;}
+				let metaCreatorCalled = false;
+				function metaCreator(...args) {metaCreatorCalled = true;}
+				let test = myApi.createAction('TEST', actionCreator, metaCreator);
+				let action = test({my: 'action'});
+				expect(actionCreatorCalled).to.equal(true);
+				expect(metaCreatorCalled).to.equal(true);
 			});
 		});
 
@@ -110,18 +206,10 @@ describe('redux-apis', () => {
 			it('dispatches an action to the root of the Api tree', () => {
 			});
 		});
-
-		describe('execute', () => {
-			it('is a function available on instances of Api', () => {
-				class MyApi extends Api {};
-				const myApi = new MyApi();
-				expect(myApi.execute).to.be.a('function');
-			});
-		});
 	});
 
 	describe('RootApi', () => {
-		class MyApi extends Api {};
+		class MyApi extends Api {someFunction(){}};
 		let root = new RootApi(MyApi, createStore);
 
 		it('is a class that binds a Redux store to an Api', () => {
@@ -138,18 +226,47 @@ describe('redux-apis', () => {
 
 		describe('bind', () => {
 			it('binds an Api to this RootApi, replacing the previous binding', () => {
-				class MyOtherApi extends Api {};
-				expect(root).to.have.a.property('api');
-				expect(root.api).to.be.an.instanceOf(MyApi);
+				var nestedFunctionCalled = false;
+				class MyNestedApi extends Api {
+					nestedFunction() {
+						nestedFunctionCalled = true;
+					}
+				}
+				var myFunctionCalled = false;
+				class MyOtherApi extends Api {
+					constructor(...args) {
+						super(...args);
+						this.sub('nested', MyNestedApi);
+					}
+
+					myFunction() {
+						myFunctionCalled = true;
+					}
+				};
+				expect(root).to.have.a.property('__api');
+				expect(root.__api).to.be.an.instanceOf(MyApi);
+				expect(root).to.have.a.property('someFunction');
+				expect(root.someFunction).to.be.a('function');
 				expect(root).to.have.a.property('bind');
 				expect(root.bind).to.be.a('function');
 				root.bind(MyOtherApi);
-				expect(root).to.have.a.property('api');
-				expect(root.api).to.be.an.instanceOf(MyOtherApi);
-				expect(root.api).to.have.a.property('parent');
-				expect(root.api.parent).to.equal(root);
-				expect(root.api).to.have.a.property('state');
-				expect(root.api.state).to.equal(root.store.getState());
+				expect(root).to.have.a.property('__api');
+				expect(root.__api).to.be.an.instanceOf(MyOtherApi);
+				expect(root.__api).to.have.a.property('parent');
+				expect(root.__api.parent).to.equal(root);
+				expect(root.__api).to.have.a.property('state');
+				expect(root.__api.state).to.equal(root.store.getState());
+				expect(root).to.not.have.a.property('someFunction');
+				expect(root).to.have.a.property('myFunction');
+				expect(root.myFunction).to.be.a('function');
+				root.myFunction();
+				expect(myFunctionCalled).to.equal(true);
+				expect(root).to.have.a.property('nested');
+				expect(root.nested).to.be.an.instanceOf(MyNestedApi);
+				expect(root.nested).to.have.a.property('nestedFunction');
+				expect(root.nested.nestedFunction).to.be.a('function');
+				root.nested.nestedFunction();
+				expect(nestedFunctionCalled).to.equal(true);
 			});
 		});
 	});

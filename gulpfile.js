@@ -4,9 +4,7 @@ sourcemaps = require('gulp-sourcemaps'),
 babel = require('gulp-babel'),
 path = require('path'),
 fs = require('fs'),
-pkg = JSON.parse(fs.readFileSync('package.json')),
-src = path.join(__dirname, 'src'),
-production = process.env.NODE_ENV === 'production';
+pkg = JSON.parse(fs.readFileSync('package.json'));
 
 gulp.task('default', function(){
 	return gulp.src(pkg.entry)
