@@ -1,6 +1,6 @@
 {
   "name": "redux-apis",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Helpers to create Redux-aware API's",
   "babel": {
     "presets": [
@@ -15,7 +15,8 @@
   "main": "lib/redux-apis.js",
   "scripts": {
     "build": "gulp",
-    "test": "mocha --require babel-register src/**/*spec.jsx"
+    "test": "mocha --require babel-register \"src/**/*spec.jsx\"",
+	"examples": "mocha --require babel-register \"examples/**/*spec.jsx\""
   },
   "keywords": [
     "redux",
@@ -52,7 +53,5 @@
     "path": "^0.12.7",
     "redux": "^3.0.5"
   },
-  "dependencies": {
-    "redux-actions": "^0.9.0"
-  }
+  "dependencies": {}
 }
