@@ -14,6 +14,15 @@ describe('redux-apis', () => {
 		});
 
 		describe('constructor', () => {
+			it('accepts a state slice', () => {
+				class MyApi extends Api {};
+				const myApi = new MyApi({my: 'state'});
+				expect(myApi).to.have.a.property('state');
+				expect(myApi.state).to.be.an('object');
+				expect(myApi.state).to.have.a.property('my');
+				expect(myApi.state.my).to.equal('state');
+			});
+
 			it('can be overidden to add sub Apis', () => {
 				class SubApi extends Api {};
 				class MyApi extends Api {
@@ -29,6 +38,42 @@ describe('redux-apis', () => {
 				expect(myApi.nested).to.be.an.instanceOf(SubApi);
 			});
 		});
+
+		describe('init', () => {
+			let dispatched = false;
+			let initialStateCalled = 0;
+			class MyApi extends Api {
+				initialState() {initialStateCalled++; return {my: 'state'};}
+				dispatch(action) {
+					expect(action.type).to.equal('@@redux-apis/INIT');
+					dispatched = true;
+					super.dispatch(action);
+				}
+			};
+			it('dispatches an INIT action to this state tree', () => {
+				const myApi = new MyApi();
+				expect(dispatched).to.equal(false);
+				myApi.init();
+				expect(dispatched).to.equal(true);
+			});
+			it('returns `this` to allow for chaining', () => {
+				const myApi = new MyApi();
+				const returned = myApi.init();
+				expect(returned).to.equal(myApi);
+			});
+			it('results in initialState being called', () => {
+				const myApi = new MyApi().init();
+				expect(initialStateCalled).to.equal(3);
+			});
+			it('results in state being defined', () => {
+				const myApi = new MyApi().init();
+				expect(myApi).to.have.a.property('state');
+				expect(myApi.state).to.be.an('object');
+				expect(myApi.state).to.have.a.property('my');
+				expect(myApi.state.my).to.equal('state');
+			});
+		});
+
 
 		describe('sub', () => {
 			it('is a function available on instances of Api', () => {

@@ -33,6 +33,11 @@ export default class Api {
 		this.__handlers = {};
 	}
 
+	init() {
+		this.dispatch(this.createAction('@@redux-apis/INIT')());
+		return this;
+	}
+
 	sub(name, api) {
 		this[name] = new api();
 		this[name].parent = this;

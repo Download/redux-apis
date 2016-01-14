@@ -1,4 +1,4 @@
-# redux-apis <sub><sup>v0.7.0</sup></sub>
+# redux-apis <sub><sup>v0.8.0</sup></sub>
 
 **Helpers for creating Redux-aware APIs**
 
@@ -143,7 +143,17 @@ to make it work, because Api objects will maintain their own state when not conn
 to a Redux store. This is helpful when testing:
 
 ```js
-var api = new DrawerApi();
+var api = new DrawerApi().init();
+```
+
+Note how we call `init()` on the new instance. This initializes the state tree based on the
+results of `initialState()`. If you use Api objects independently from Redux, you are responsible
+for initializing them yourself, by calling `init` on the top-level Api. If you bind your Api to
+a Redux store, this is done automatically by the Redux store.
+
+Now that we have an initialized Api, we can use it:
+
+```js
 console.assert(api.isOpen() === false, 'Initially, the drawer should be closed');
 api.open();
 console.assert(api.isOpen() === true, 'After calling open(), the drawer should be open');
@@ -166,10 +176,10 @@ class AppApi extends Api {
 	}
 }
 
-var appApi = new AppApi();
+const app = new AppApi().init();
 ```
 
-That's it! `appApi` now automatically has a state tree that, once initialized, looks like this:
+That's it! `app` now automatically has a state tree that looks like this:
 
 ```js
 {
@@ -182,11 +192,11 @@ That's it! `appApi` now automatically has a state tree that, once initialized, l
 }
 ```
 
-We can use the `appApi` like this:
+We can use `app` like this:
 
 ```js
-appApi.leftDrawer.open();
-console.assert(appApi.leftDrawer.isOpen() === true, 'The left drawer should be opened');
+app.leftDrawer.open();
+console.assert(app.leftDrawer.isOpen() === true, 'The left drawer should be opened');
 ```
 
 This works, because `Api.createAction`, `Api.dispatch` and `Api.handle` all follow the same naming
@@ -198,11 +208,19 @@ we called `appApi.leftDrawer.open()`, it actually resulted in an action being cr
 all the way to the top-level. From there, `handle` is invoked and is doing the opposite; it's
 breaking the `actionType` apart into separate parts and routing the action to it's destination.
 Along the way, 'handle' will be invoked on all nodes of the state tree. If it finds a registered
-handler for the action, it invokes that and returns it's result. Otherwise, it invokes
-`initialState` and returns that. The side effect of this is that we can initialize the entire
-state tree by just sending it an action that it does not handle. Redux actually utilises this; it
-dispatches an action with type `'@@redux/INIT'` right after it has created the store.
-``
+handler for the action, it invokes that and returns it's result. Otherwise, it returns the current
+state, or, if that's not defined, invokes `initialState` and returns that. The side effect of this
+is that we can initialize the entire state tree by just sending it an action that it does not handle.
+This is exactly what `init()` does; it dispatches an action with type `'@@redux-apis/INIT'`. Redux
+does it the same way, dispatching an action with type `'@@redux/INIT'` right after it has created
+the store.
+
+Because the `Api` constructor accepts a state argument, we can also initialize it manually:
+
+```js
+const leftDrawer = new DrawerApi({open: true});
+console.assert(leftDrawer.isOpen() === true, 'The left drawer should be open');
+```
 
 ### Create the root API
 
@@ -223,14 +241,13 @@ import Api, { RootApi } from 'redux-apis';
 import { createStore } from 'redux';
 import AppApi from './AppApi';
 
-var app = new RootApi(AppApi, createStore);
+const app = new RootApi(AppApi, createStore);
 ```
 
 We pass `AppApi` as the first argument and `createStore` as the second argument. The
 `RootApi` constructor will create an `AppApi` instance and a root reducer function that
 just calls the `handle` method on that instance. It then uses this root reducer to
 create the Redux store. If you need the store it self you can just grab it from `app.store`.
-
 
 Here's the cool thing. `app` will be an `instanceof RootApi`, but it will have all methods and
 properties of `AppApi`, so it functions as a transparent proxy. Assuming the `AppApi` introduced
@@ -258,7 +275,10 @@ Using this information, here is how we can do Hot Module Replacement with `redux
 ```js
 import { createStore } from 'redux';
 import { RootApi } from 'redux-apis';
-let AppApi = require('./AppApi').default; // use require i.s.o import
+
+// use require i.s.o import
+// don't use const as this component will be replaced
+let AppApi = require('./AppApi').default;
 
 // app object can be const. We can share it with the world, export it etc
 const app = new RootApi(AppApi, createStore);
