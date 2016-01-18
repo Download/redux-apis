@@ -1,6 +1,6 @@
 {
   "name": "redux-apis",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "Helpers to create Redux-aware API's",
   "babel": {
     "presets": [

@@ -1,4 +1,4 @@
-# redux-apis <sub><sup>v0.9.1</sup></sub>
+# redux-apis <sub><sup>v0.9.2</sup></sub>
 
 **Helpers for creating Redux-aware APIs**
 
