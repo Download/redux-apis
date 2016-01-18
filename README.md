@@ -204,7 +204,7 @@ conventions and are aware of the hierarchy via the `parent` property. When you c
 with an `actionType` argument, it checks the `parent` property and, if it's set, prepends it's name
 and a slash to the `actionType` before passing it on to it's parent. So in the example above, when
 we called `appApi.leftDrawer.open()`, it actually resulted in an action being created with
-`actionType` equal to `'leftDrawer/OPEN'`. `dispatch` than passes that action along to it's parent,
+`actionType` equal to `'leftDrawer/OPEN'`. `dispatch` then passes that action along to it's parent,
 all the way to the top-level. From there, `handle` is invoked and is doing the opposite; it's
 breaking the `actionType` apart into separate parts and routing the action to it's destination.
 Along the way, 'handle' will be invoked on all nodes of the state tree. If it finds a registered
