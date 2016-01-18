@@ -1,4 +1,4 @@
-# redux-apis <sub><sup>v0.9.0</sup></sub>
+# redux-apis <sub><sup>v0.9.1</sup></sub>
 
 **Helpers for creating Redux-aware APIs**
 
@@ -241,13 +241,27 @@ import Api, { RootApi } from 'redux-apis';
 import { createStore } from 'redux';
 import AppApi from './AppApi';
 
+// This will create the store, bind it to the AppApi and fire
+// the `'@@redux/INIT'` action to initialize the store data
 const app = new RootApi(AppApi, createStore);
+
+// or, if we have some initialState already, use this to
+// assign it directly to the new store
+const app = new RootApi(AppApi, createStore, initialState);
 ```
 
 We pass `AppApi` as the first argument and `createStore` as the second argument. The
 `RootApi` constructor will create an `AppApi` instance and a root reducer function that
 just calls the `handle` method on that instance. It then uses this root reducer to
-create the Redux store. If you need the store it self you can just grab it from `app.store`.
+create the Redux store. Optionally you can pass the initial state as the third argument
+and it will be assigned to the new store, or, if you leave it out, redux will send an
+INIT action to the new store to initialize it.
+
+If you need the store, you can just grab it from `app.store`:
+
+```js
+const store = app.store;
+```
 
 Here's the cool thing. `app` will be an `instanceof RootApi`, but it will have all methods and
 properties of `AppApi`, so it functions as a transparent proxy. Assuming the `AppApi` introduced

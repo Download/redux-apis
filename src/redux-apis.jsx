@@ -89,11 +89,11 @@ export default class Api {
 }
 
 export class RootApi extends Api {
-	constructor(api, createStore) {
+	constructor(api, createStore, initialState) {
 		super();
 		this.bind(api);
 		let reducer = (state, action) => this.__api.handle(action);
-		this.store = createStore(reducer);
+		this.store = createStore(reducer, initialState);
 	}
 
 	bind(api) {
