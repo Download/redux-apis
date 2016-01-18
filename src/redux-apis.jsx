@@ -54,8 +54,9 @@ export default class Api {
 	dispatch(action) {
 		if (this.parent) {return this.parent.dispatch(action);}
 		if (this.store) {return this.store.dispatch(action);}
-		// root, but not connected to store, exec directly
-		return this.state = this.handle(action);
+		if (typeof action == 'function') {return action(this.dispatch.bind(this), () => this.state);}
+		this.state = this.handle(action);
+		return action;
 	}
 
 	initialState() {
