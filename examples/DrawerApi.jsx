@@ -1,18 +1,14 @@
 ﻿import Api from '../src/redux-apis';
 
 export default class DrawerApi extends Api {
-	constructor(state) {
+	constructor(state = { open: false }) {
 		super(state);
-		this.addHandler('OPEN', (action) => ({ ...this.state, open: true }));
-		this.addHandler('CLOSE', (action) => ({ ...this.state, open: false }));
-	}
-
-	initialState() {
-		return { open: false };
+		this.setHandler('OPEN', (state, action) => ({ ...state, open: true }));
+		this.setHandler('CLOSE', (state, action) => ({ ...state, open: false }));
 	}
 
 	isOpen() {
-		return this.state.open;
+		return this.getState().open;
 	}
 
 	open() {

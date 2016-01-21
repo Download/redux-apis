@@ -1,57 +1,22 @@
-﻿// stolen from https://github.com/acdlite/redux-actions/blob/v0.9.0/src/createAction.js
-export function createAction(type, actionCreator, metaCreator) {
-  const finalActionCreator = typeof actionCreator === 'function' ? actionCreator : (t) => t;
-  return (...args) => {
-    const action = {type, payload:finalActionCreator(...args)};
-    if (args.length === 1 && args[0] instanceof Error) {action.error = true;}
-    if (typeof metaCreator === 'function') {action.meta = metaCreator(...args);}
-    return action;
-  };
-}
-
-export function childName(parent, child) {
-	for (name of Object.keys(parent)) {
-		if (parent[name] === child) return name;
-	}
-}
-
-export function apiLink(parentState, childState) {
-	return childState === undefined
-		? parentState[childName(this.__parent, this)]
-		: parentState[childName(this.__parent, this)] = childState;
-}
-
-export function storeLink(parentState, childState) {
-	return childState === undefined
-		? parentState
-		: childState;
-}
-
-export function createReducer(api, link = storeLink) {
-	api.__link = link.bind(api);
-	return (state, action) => api.handle(api.__link(state), action);
-}
-
-export function link(parent, child, link = apiLink) {
-	child.__parent = parent;
-	child.__link = child.__link || link.bind(child);
-	return child;
-}
-
-export class Api {
-	constructor(state) {
-		var handlers = {};
+﻿export class Api {
+	constructor(state = {}) {
 		Object.defineProperties(this, {
 			__actionHandlers: { value: {} },
-			__getState: { value: () => state },
+			__state: { value:state, writable:true },
 			__dispatch: { value: (action) => {
 				if (typeof action == 'function') {return action(this.dispatch.bind(this), this.getState.bind(this));}
-				state = this.handle(this.getState(), action);
+				state = this.handle(state, action);
 				return action;
 			}},
 			__parent: { value: undefined, writable: true },
 			__link: { value: undefined, writable: true },
 		});
+
+	}
+
+	init() {
+		this.dispatch(this.createAction('@@redux/INIT')());
+		return this;
 	}
 
 	dispatch(action) {
@@ -59,11 +24,13 @@ export class Api {
 	}
 
 	getState() {
-		return this.__parent ? this.__link(this.__parent.getState()) : this.__getState();
+		return this.__parent
+			? (this.__link ? this.__link(this.__parent.getState()) : this.__parent.getState())
+			: this.__state;
 	}
 
 	createAction(actionType, payloadCreator, metaCreator) {
-		return this.__parent
+		return this.__parent instanceof Api
 				? this.__parent.createAction(childName(this.__parent, this) + '/' + actionType, payloadCreator, metaCreator)
 				: createAction(actionType, payloadCreator, metaCreator);
 	}
@@ -79,29 +46,58 @@ export class Api {
 	handle(state, action) {
 		const idx = action.type.indexOf('/');
 		const subAction = idx !== -1 && action.type.substring(0, idx);
-		const subs = Object.keys(this).filter(key => this[key] instanceof Api2);
 		let result = this.__actionHandlers[action.type]
 			? this.__actionHandlers[action.type].call(this, state, action)
-			: (state === undefined ? this.initialState() : undefined);
+			: (state === undefined ? this.__state : undefined);
+		const subs = Object.keys(this).filter(key => this[key] instanceof Api);
 		subs.forEach(sub => {
 			const act = sub !== subAction ? action : {...action, type:action.type.substring(idx + 1)};
-			const subState = this[sub].handle(this[sub].getState(), act);
-			if (state === undefined || this[sub].getState() !== subState) {
-				if (result === undefined) {result = { ...state };}
-				this[sub].__link(result, subState);
+			const subResult = this[sub].handle(this[sub].__link(state), act);
+			if (state === undefined || this[sub].__link && this[sub].__link(state) === undefined || this[sub].getState() !== subResult) {
+				if (result === undefined) {
+					result = state instanceof Array
+						? [ ...state ]
+						: { ...state };
+				}
+				this[sub].__link(result, subResult);
 			}
 		});
-		return result || state;
-	}
-
-	initialState() {
-		return {};
-	}
-
-	init() {
-		this.dispatch(this.createAction('@@redux/INIT')());
-		return this;
+		return this.__state = result || state;
 	}
 }
 
 export default Api;
+
+export function link(parent, child, link = apiLink) {
+	child.__parent = parent;
+	if (parent instanceof Api) child.__link = link.bind(child);
+	return child;
+}
+
+function apiLink(parentState, childState) {
+	return childState === undefined
+		? (typeof parentState == 'object' && this.__parent
+			? parentState[childName(this.__parent, this)]
+			: parentState)
+		: (typeof parentState == 'object' && this.__parent
+			? parentState[childName(this.__parent, this)] = childState
+			: childState)
+}
+
+function childName(parent, child) {
+	let names = Object.keys(parent);
+	for (let i=0,name; name=names[i]; i++) {
+		if (parent[name] === child) return name;
+	}
+}
+
+// stolen from https://github.com/acdlite/redux-actions/blob/v0.9.0/src/createAction.js
+function createAction(type, actionCreator, metaCreator) {
+  const finalActionCreator = typeof actionCreator === 'function' ? actionCreator : (t) => t;
+  return (...args) => {
+    const action = {type, payload:finalActionCreator(...args)};
+    if (args.length === 1 && args[0] instanceof Error) {action.error = true;}
+    if (typeof metaCreator === 'function') {action.meta = metaCreator(...args);}
+    return action;
+  };
+}

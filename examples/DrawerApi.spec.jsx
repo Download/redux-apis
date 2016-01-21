@@ -1,4 +1,4 @@
-﻿import Api from '../src/redux-apis';
+﻿import Api, { link } from '../src/redux-apis';
 import DrawerApi from './DrawerApi';
 import { expect } from 'chai';
 
@@ -14,9 +14,8 @@ describe('DrawerApi', () => {
 	it('accepts a state slice', () => {
 		let drawer = new DrawerApi({open:true});
 		expect(drawer).to.be.an.instanceOf(DrawerApi);
-		expect(drawer).to.have.a.property('state');
-		expect(drawer.state).to.have.a.property('open');
-		expect(drawer.state.open).to.equal(true);
+		expect(drawer.getState()).to.have.a.property('open');
+		expect(drawer.getState().open).to.equal(true);
 	});
 
 	it('has methods to inspect it\'s state slice', () => {
@@ -36,17 +35,19 @@ describe('DrawerApi', () => {
 	describe('isOpen', () => {
 		it('returns the value of the property `open` in the state slice', () => {
 			let drawer = new DrawerApi({open:true});
-			expect(drawer.isOpen()).to.equal(drawer.state.open);
-			drawer = new DrawerApi({open:false});
-			expect(drawer.isOpen()).to.equal(drawer.state.open);
+			expect(drawer.isOpen()).to.equal(true);
+			expect(drawer.isOpen()).to.equal(drawer.getState().open);
+			drawer = new DrawerApi();
+			expect(drawer.isOpen()).to.equal(false);
+			expect(drawer.isOpen()).to.equal(drawer.getState().open);
 		});
 	});
 
 	describe('open', () => {
 		class TestOpen extends Api {
-			constructor(state={}) {
+			constructor(state) {
 				super(state);
-				this.sub('drawer', DrawerApi);
+				this.drawer = link(this, new DrawerApi());
 			}
 
 			dispatch(action) {
@@ -59,7 +60,7 @@ describe('DrawerApi', () => {
 				let apiAction = action.type.substring(idx + 1);
 				expect(apiPath).to.equal('drawer');
 				expect(apiAction).to.equal('OPEN');
-				super.dispatch(action);
+				return super.dispatch(action);
 			}
 
 			createAction(actionType, payloadCreator, metaCreator) {
@@ -71,14 +72,14 @@ describe('DrawerApi', () => {
 
 		it('creates an action \'OPEN\' and dispatches it to the parent api', () => {
 			const test = new TestOpen({drawer: {open:false}});
-			expect(test.drawer.state.open).to.equal(false);
+			expect(test.drawer.getState().open).to.equal(false);
 			test.drawer.open();
 		});
 
 		it('results in the `open` flag being set to `true`', () => {
 			const test = new TestOpen({drawer: {open:false}});
 			test.drawer.open();
-			expect(test.drawer.state.open).to.equal(true);
+			expect(test.drawer.getState().open).to.equal(true);
 		});
 	});
 
@@ -86,7 +87,7 @@ describe('DrawerApi', () => {
 		class TestClose extends Api {
 			constructor(state={}) {
 				super(state);
-				this.sub('drawer', DrawerApi);
+				this.drawer = link(this, new DrawerApi());
 			}
 
 			dispatch(action) {
@@ -99,7 +100,7 @@ describe('DrawerApi', () => {
 				let apiAction = action.type.substring(idx + 1);
 				expect(apiPath).to.equal('drawer');
 				expect(apiAction).to.equal('CLOSE');
-				super.dispatch(action);
+				return super.dispatch(action);
 			}
 
 			createAction(actionType, payloadCreator, metaCreator) {
@@ -111,14 +112,14 @@ describe('DrawerApi', () => {
 
 		it('creates an action \'CLOSE\' and dispatches it to the parent api', () => {
 			let test = new TestClose({drawer: {open:true}});
-			expect(test.drawer.state.open).to.equal(true);
+			expect(test.drawer.getState().open).to.equal(true);
 			test.drawer.close();
 		});
 
 		it('results in the `open` flag being set to `false`', () => {
 			let test = new TestClose({drawer: {open:true}});
 			test.drawer.close();
-			expect(test.drawer.state.open).to.equal(false);
+			expect(test.drawer.getState().open).to.equal(false);
 		});
 	});
 });

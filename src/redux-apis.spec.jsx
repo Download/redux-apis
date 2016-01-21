@@ -1,7 +1,6 @@
-﻿import 'source-map-support/register';
-import { expect } from 'chai';
+﻿import { expect } from 'chai';
 import { createStore } from 'redux';
-import { Api, link } from './redux-apis';
+import { Api, link, createReducer } from './redux-apis';
 
 describe('Api', () => {
 	it('is a class that serves as a base class for redux-aware API\'s', () => {
@@ -9,14 +8,8 @@ describe('Api', () => {
 		expect(Api).to.be.a('function');
 		class MyApi extends Api {};
 		expect(MyApi.prototype).to.be.an.instanceOf(Api);
-	});
-
-	it('has only hidden properties', () => {
-		console.log(Object.keys(new Api()));
 		expect(Object.keys(new Api()).length).to.equal(0);
 	});
-
-
 
 	describe('.constructor(state)', () => {
 		it('can be called without arguments', () => {
@@ -26,9 +19,9 @@ describe('Api', () => {
 			expect(myApi.getState).to.be.a('function');
 		});
 
-		it('results in `getState` returning `undefined`', () => {
+		it('results in `getState` returning the default value for the `state` parameter', () => {
 			const myApi = new Api()
-			expect(myApi.getState()).to.equal(undefined);
+			expect(myApi.getState()).to.be.an('object');
 		});
 
 		it('accepts a state slice', () => {
@@ -43,40 +36,28 @@ describe('Api', () => {
 		});
 	});
 
-	describe('.initialState()', () => {
-		it('is a function available on instances of Api', () => {
-			expect(new Api().initialState).to.be.a('function');
-		});
-
-		it('returns a new empty object by default', () => {
-			expect(new Api().initialState()).to.be.an('object');
-			expect(Object.keys(new Api().initialState()).length).to.equal(0);
-		});
-
-		it('can be overridden to provide custom initial state', () => {
-			class MyApi extends Api { initialState(){return {custom:'state'};} }
-			expect(new MyApi().initialState()).to.have.a.property('custom');
-			expect(new MyApi().initialState().custom).to.equal('state');
-		});
-	});
-
 	describe('.init()', () => {
 		let dispatched = false;
 		let initialStateCalled = 0;
+		class Nested extends Api {constructor(state = 'NESTED') {super(state);}}
 		class MyApi extends Api {
-			initialState() {initialStateCalled++; return {my: 'state'};}
+			constructor(state = {my: 'state'}) {
+				super(state);
+				this.nested = link(this, new Nested());
+			}
 			dispatch(action) {
 				expect(action.type).to.equal('@@redux/INIT');
 				dispatched = true;
-				super.dispatch(action);
+				return super.dispatch(action);
 			}
 		};
-		it('is a function available on instances of Api', () => {
+
+		it('can be used to manually initialize the state tree', () => {
 			const myApi = new MyApi();
 			expect(myApi.init).to.be.a('function');
 		});
 
-		it('dispatches an INIT action to this state tree', () => {
+		it('dispatches a redux INIT action to this state tree', () => {
 			const myApi = new MyApi();
 			expect(dispatched).to.equal(false);
 			myApi.init();
@@ -87,17 +68,25 @@ describe('Api', () => {
 			const returned = myApi.init();
 			expect(returned).to.equal(myApi);
 		});
-		it('results in `initialState` being called', () => {
-			expect(initialStateCalled).to.equal(2);
-			const myApi = new MyApi().init();
-			expect(initialStateCalled).to.equal(3);
-		});
 		it('results in `getState` returning the initial state', () => {
 			const myApi = new MyApi().init();
 			expect(myApi).to.have.a.property('getState');
 			expect(myApi.getState).to.be.a('function');
 			expect(myApi.getState()).to.have.a.property('my');
 			expect(myApi.getState().my).to.equal('state');
+			expect(myApi.getState()).to.have.a.property('nested');
+			expect(myApi.getState().nested).to.equal('NESTED');
+		});
+		it('does not have to be called when using redux', () => {
+			const myApi = new MyApi();
+			const store = createStore(myApi.handle.bind(myApi));
+			link(store, myApi);
+			expect(myApi).to.have.a.property('getState');
+			expect(myApi.getState).to.be.a('function');
+			expect(myApi.getState()).to.have.a.property('my');
+			expect(myApi.getState().my).to.equal('state');
+			expect(myApi.getState()).to.have.a.property('nested');
+			expect(myApi.getState().nested).to.equal('NESTED');
 		});
 	});
 
@@ -254,62 +243,46 @@ describe('Api', () => {
 				}
 			};
 			let myApi = new MyApi();
-			expect(myApi.getState()).to.equal(undefined);
 			myApi.call('Some message');
 			expect(handlerCalled).to.equal(true);
-			expect(myApi.getState()).to.not.equal(undefined);
 			expect(myApi.getState()).to.have.a.property('msg');
 			expect(myApi.getState().msg).to.equal('Some message');
-		})
-
-		it('invokes `initialState` if no handler exists and current state is undefined', () => {
-			class MyApi extends Api {
-				initialState() {
-					return { msg: 'Hello, World!' };
-				}
-			};
-			let myApi = new MyApi();
-			expect(myApi.getState()).to.equal(undefined);
-			myApi.dispatch(myApi.createAction('SOME_ACTION')({ some: 'payload' }));
-			expect(myApi.getState()).to.not.equal(undefined);
-			expect(myApi.getState()).to.have.a.property('msg');
-			expect(myApi.getState().msg).to.equal('Hello, World!');
-		})
-
-		it('does not invoke `initialState` if current state is already defined', () => {
-			let initialStateCalled = 0;
-			class MyApi extends Api {
-				initialState() {
-					initialStateCalled++;
-					return { msg: 'Hello, World!' };
-				}
-			};
-			let myApi = new MyApi();
-			expect(initialStateCalled).to.equal(0);
-			myApi.dispatch(myApi.createAction('SOME_ACTION')({ some: 'payload' }));
-			expect(initialStateCalled).to.equal(1);
-			myApi.dispatch(myApi.createAction('SOME_ACTION')({ some: 'payload' }));
-			expect(initialStateCalled).to.equal(1);
 		})
 	});
 });
 
-
 describe('link(parent, child, link/*(parentState,childState)*/ )', () => {
-	it('can be used to link sub Apis', () => {
+	it('can be used to link a child api to a parent api', () => {
 		class SubApi extends Api {};
 		class MyApi extends Api {
 			constructor(state) {
 				super(state);
 				this.nested = link(this, new SubApi());
-				expect(this.nested).to.be.an.instanceOf(SubApi);
 			}
 		};
 		const myApi = new MyApi({nested: 'test'});
 		expect(myApi).to.have.a.property('nested');
 		expect(myApi.nested.getState()).to.equal('test');
 	});
-	it('accepts an optional function to link to the parent state', () => {
+	it('results in actions on the child api to be dispatched via the parent api', () => {
+		let dispatchCalled = false;
+		class SubApi extends Api {test(){this.dispatch(this.createAction('TEST')());}};
+		class MyApi extends Api {
+			constructor(state) {
+				super(state);
+				this.nested = link(this, new SubApi());
+				expect(this.nested).to.be.an.instanceOf(SubApi);
+			}
+			dispatch(action) {
+				if (action.type.indexOf('TEST') !== -1) {dispatchCalled = true;}
+				return super.dispatch(action);
+			}
+		};
+		const myApi = new MyApi({nested: 'test'});
+		myApi.nested.test();
+		expect(dispatchCalled).to.equal(true);
+	});
+	it('accepts an optional `link` function to link the child state to the parent state', () => {
 		class SubApi extends Api {};
 		class MyApi extends Api {
 			constructor(state) {
@@ -322,6 +295,81 @@ describe('link(parent, child, link/*(parentState,childState)*/ )', () => {
 		expect(myApi).to.have.a.property('nested');
 		expect(myApi.nested).to.be.an.instanceOf(SubApi);
 		expect(myApi.nested.getState()).to.equal(expected);
+	});
+	it('can be used to link an api to a redux store', () => {
+		class SubApi extends Api {constructor(state = {sub:'api'}){super(state);}};
+		class MyApi extends Api {
+			constructor(state) {
+				super(state);
+				this.handleCalled = 0;
+				this.nested = link(this, new SubApi());
+				this.setHandler('TEST', (state, action) => {
+					return { ...state, test:action.payload };
+				})
+			}
+			test(msg) {
+				return this.dispatch(this.createAction('TEST')(msg));
+			}
+			handle(state, action) {
+				this.handleCalled++;
+				return super.handle(state, action);
+			}
+		};
+		let myApi = new MyApi();
+		expect(myApi.handleCalled).to.equal(0);
+		let store = createStore(myApi.handle.bind(myApi), {custom:'state'});
+		link(store, myApi);
+		expect(store).to.be.an('object');
+		expect(store.getState()).to.have.a.property('nested');
+		expect(store.getState().nested).to.have.a.property('sub');
+		expect(store.getState().nested.sub).to.equal('api');
+		expect(myApi.handleCalled).to.equal(1);
+		myApi.test('MESSAGE');
+		expect(myApi.handleCalled).to.equal(2);
+		expect(store.getState()).to.have.a.property('test');
+		expect(store.getState().test).to.equal('MESSAGE');
+		expect(store.getState().test).to.equal(myApi.getState().test);
+
+		myApi = new MyApi();
+		expect(myApi.handleCalled).to.equal(0);
+		store = createStore(myApi.handle.bind(myApi), {nested: 'test'});
+		link(store, myApi);
+		expect(store.getState()).to.have.a.property('nested');
+		expect(store.getState().nested).to.equal('test');
+		expect(myApi.nested.getState()).to.equal('test');
+		myApi.test('MESSAGE');
+		expect(myApi.handleCalled).to.equal(2);
+		expect(store.getState()).to.have.a.property('test');
+		expect(store.getState().test).to.equal('MESSAGE');
+		expect(store.getState().test).to.equal(myApi.getState().test);
+	});
+	it('ignores the optional `link` parameter when the parent is a redux store', () => {
+		const expected = 'wow a custom state link!';
+		const myApi = new Api({custom: expected});
+		let store = createStore(myApi.handle.bind(myApi));
+		link(store, myApi, (state, subState) => subState ? state.custom = subState : state.custom);
+		expect(myApi.getState()).to.have.a.property('custom');
+		expect(myApi.getState().custom).to.equal(expected);
+	});
+	it('can be used to index state objects into a parent array', () => {
+		const indexLink = (idx) => (parentState, childState) => childState
+				? parentState[idx] = childState
+				: parentState[idx];
+
+		class MyApi extends Api {
+			constructor(state = []) {
+				super(state);
+				this.first = link(this, new Api('1st'), indexLink(0));
+				this.second = link(this, new Api('2nd'), indexLink(1));
+				this.third = link(this, new Api('3rd'), indexLink(2));
+			}
+			init() {this.dispatch(this.createAction('@@redux/INIT')()); return this;}
+		}
+		const myApi = new MyApi().init();
+		expect(myApi.getState()).to.be.an.instanceOf(Array);
+		expect(myApi.getState()[0]).to.equal('1st');
+		expect(myApi.getState()[1]).to.equal('2nd');
+		expect(myApi.getState()[2]).to.equal('3rd');
 	});
 });
 

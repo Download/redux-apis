@@ -1,18 +1,20 @@
-# redux-apis <sub><sup>v0.9.2</sup></sub>
+# redux-apis <sub><sup>v0.10.0</sup></sub>
 
 **Helpers for creating Redux-aware APIs**
+
 
 ## Installation
 ```sh
 npm install --save redux-apis
 ```
 
+
 ## Usage
 
 * [Create APIs](#create-apis)
 * [Compose existing APIs into new ones](#compose-existing-apis-into-new-ones)
-* [Create the root API](#create-the-root-api)
-* [Use the root API with Hot Module Replacement](#use-the-root-api-with-hot-module-replacement)
+* [Link the top-level Api to a Redux store](#link-the-top-level-Api-to-a-redux-store)
+* [Use redux-apis with Hot Module Replacement](#use-redux-apis-with-hot-module-replacement)
 
 ### Create APIs
 
@@ -28,27 +30,27 @@ export default class DrawerApi extends Api {
 ```
 
 An Api automatically gets it's own private slice of the Redux state tree, accessible via
-`this.state`. Using this we can easily implement getters:
+`this.getState()`. Using this we can easily implement getters:
 
 ```js
 export default class DrawerApi extends Api {
 	isOpen() {
-		return this.state.open;
+		return this.getState().open;
 	}
 }
 ```
 
 The code above assumes that our state has a boolean flag `open`... But we need to provide
-that initial state:
+that initial state. We do so by adding a constructor with a default value for the `state` parameter:
 
 ```js
 export default class DrawerApi extends Api {
-	initialState() {
-		return { open: false };
+	constructor(state = { open: false }) {
+		super(state);
 	}
 
 	isOpen() {
-		return this.state.open;
+		return this.getState().open;
 	}
 }
 ```
@@ -57,12 +59,12 @@ To manipulate the state tree, we provide methods that create and dispatch an act
 
 ```js
 export default class DrawerApi extends Api {
-	initialState() {
-		return { open: false };
+	constructor(state = { open: false }) {
+		super(state);
 	}
 
 	isOpen() {
-		return this.state.open;
+		return this.getState().open;
 	}
 
 	open() {
@@ -80,20 +82,16 @@ We then register *handlers* for these actions in the constructor:
 
 ```js
 export default class DrawerApi extends Api {
-	constructor(state) {
+	constructor(state = { open: false }) {
 		super(state);
 
-		this.addHandler('OPEN', function handleOpen(action) {
-			return { ...this.state, open: true };
+		this.setHandler('OPEN', function handleOpen(state, action) {
+			return { ...state, open: true };
 		});
 	}
 
-	initialState() {
-		return { open: false };
-	}
-
 	isOpen() {
-		return this.state.open;
+		return this.getState().open;
 	}
 
 	open() {
@@ -114,18 +112,14 @@ code a bit more elegant:
 
 ```js
 export default class DrawerApi extends Api {
-	constructor(state) {
+	constructor(state = { open: false }) {
 		super(state);
-		this.addHandler('OPEN', (action) => ({ ...this.state, open: true }));
-		this.addHandler('CLOSE', (action) => ({ ...this.state, open: false }));
-	}
-
-	initialState() {
-		return { open: false };
+		this.addHandler('OPEN', (state, action) => ({ ...state, open: true }));
+		this.addHandler('CLOSE', (state, action) => ({ ...state, open: false }));
 	}
 
 	isOpen() {
-		return this.state.open;
+		return this.getState().open;
 	}
 
 	open() {
@@ -146,8 +140,8 @@ to a Redux store. This is helpful when testing:
 var api = new DrawerApi().init();
 ```
 
-Note how we call `init()` on the new instance. This initializes the state tree based on the
-results of `initialState()`. If you use Api objects independently from Redux, you are responsible
+Note how we call `init()` on the new instance. This initializes the state tree by sending it an
+INIT action. If you use Api objects independently from Redux, you are responsible
 for initializing them yourself, by calling `init` on the top-level Api. If you bind your Api to
 a Redux store, this is done automatically by the Redux store.
 
@@ -161,18 +155,27 @@ api.close();
 console.assert(api.isOpen() === false, 'After calling close(), the drawer should be closed');
 ```
 
-### Compose existing APIs into new ones
-Because each Api has it's own state slice, we can easily use the same Api multiple times:
+Because the `Api` constructor accepts a state argument, we can also initialize it manually:
 
 ```js
-import Api from 'redux-apis';
+const leftDrawer = new DrawerApi({open: true});
+console.assert(leftDrawer.isOpen() === true, 'The left drawer should be open');
+```
+
+
+### Compose existing APIs into new ones
+Because each Api has it's own state slice, we can easily use the same Api multiple times.
+We use the function `link(parent, child, link = apiLink)` for this purpose.
+
+```js
+import Api, { link } from 'redux-apis';
 import DrawerApi from './DrawerApi';
 
 class AppApi extends Api {
 	constructor(state) {
 		super(state);
-		this.sub('leftDrawer', DrawerApi);
-		this.sub('rightDrawer', DrawerApi);
+		this.leftDrawer = link(this, new DrawerApi());
+		this.rightDrawer = link(this, new DrawerApi());
 	}
 }
 
@@ -211,18 +214,89 @@ Along the way, 'handle' will be invoked on all nodes of the state tree. If it fi
 handler for the action, it invokes that and returns it's result. Otherwise, it returns the current
 state, or, if that's not defined, invokes `initialState` and returns that. The side effect of this
 is that we can initialize the entire state tree by just sending it an action that it does not handle.
-This is exactly what `init()` does; it dispatches an action with type `'@@redux-apis/INIT'`. Redux
-does it the same way, dispatching an action with type `'@@redux/INIT'` right after it has created
-the store.
+This is exactly what `init()` does; it dispatches an action with type `'@@redux/INIT'`. Redux
+does it exactly the same way.
 
-Because the `Api` constructor accepts a state argument, we can also initialize it manually:
+In fact, `Api` mimics the api of a redux store, so that conceptually we are building a hierarchy of
+redux-like `stores` that maps onto the state tree, each store in the hierarchy managing it's own
+private slice.
+
+`link` has a third parameter, also called `link`, that allows us to customize how the state slice
+of the child is extracted from the parent state. By default, it's using `apiLink`, which dynamically
+finds the name of the child api within it's parent and uses that name to select the right property
+from the state slice. This creates a 1 to 1 mapping:
 
 ```js
-const leftDrawer = new DrawerApi({open: true});
-console.assert(leftDrawer.isOpen() === true, 'The left drawer should be open');
+class AppApi extends Api {
+	constructor(state) {
+		super(state);
+		this.leftDrawer = link(this, new DrawerApi());
+		this.rightDrawer = link(this, new DrawerApi());
+	}
+}
 ```
 
-### Create the root API
+maps to
+
+```js
+{
+	leftDrawer: {
+		open: false,
+	},
+	rightDrawer: {
+		open: false,
+	},
+}
+```
+
+However, we can customize this by creating a function that accepts two arguments, `parentState`
+and `childState` and that performs the mapping. This function should be read/write; meaning it should
+be able to 'select' the child state from the `parentState`, as well as 'update' the parent state
+based on the `childState`. Let's look at an example. Suppose we want to map the leftDrawer Api onto
+the state key `drawer` instead of `leftDrawer`. We could do this:
+
+```js
+class AppApi extends Api {
+	constructor(state) {
+		super(state);
+		this.leftDrawer = link(this, new DrawerApi(), (parentState, childState) =>
+			childState === undefined ? parentState.drawer : parentState.drawer = childState;
+		);
+		this.rightDrawer = link(this, new DrawerApi());
+	}
+}
+```
+
+maps to
+
+```js
+{
+	drawer: {
+		open: false,
+	},
+	rightDrawer: {
+		open: false,
+	},
+}
+```
+
+Inside the link function, you have access to the child element via the `this` keyword, so we could also
+have done this:
+
+```js
+class AppApi extends Api {
+	constructor(state) {
+		super(state);
+		this.leftDrawer = link(this, new DrawerApi(), (parentState, childState) =>
+			childState === undefined ? parentState[this.alias] : parentState[this.alias] = childState;
+		);
+		this.leftDrawer.alias = 'drawer';
+		this.rightDrawer = link(this, new DrawerApi());
+	}
+}
+```
+
+### Link the top-level Api to a Redux store
 
 Until now, Redux never came into play. And in fact you don't need it. `redux-apis` has no runtime
 dependency on redux and can actually be used without Redux itself! The handlers you registered
@@ -237,76 +311,83 @@ redux gives us a subscription model for listening to store events.
 Here's how we hook an API to a redux store:
 
 ```js
-import Api, { RootApi } from 'redux-apis';
+import { link } from 'redux-apis';
 import { createStore } from 'redux';
 import AppApi from './AppApi';
 
-// This will create the store, bind it to the AppApi and fire
-// the `'@@redux/INIT'` action to initialize the store data
-const app = new RootApi(AppApi, createStore);
+// First, create your top-level Api object, but don't initialize it
+// the redux store will take care of that
+const app = new AppApi();
 
-// or, if we have some initialState already, use this to
-// assign it directly to the new store
-const app = new RootApi(AppApi, createStore, initialState);
+// The cool thing is that app.handle is a reducer!
+// We only have to `bind` it to make the `this` reference work correctly:
+const reducer = app.handle.bind(app);
+
+// Now, we can create a Redux store just like we always do:
+const initialState = { some: 'state' }; // optional
+const store = createStore(reducer, initialState);
+
+// Allmost there. In fact, our app has already been initialized
+// with either the supplied initial state, or the initial state
+// encoded in our Api components.
+// We just need to link the app object to the redux store, so
+// dispatched actions will be routed to the redux store:
+link(store, app);
 ```
 
-We pass `AppApi` as the first argument and `createStore` as the second argument. The
-`RootApi` constructor will create an `AppApi` instance and a root reducer function that
-just calls the `handle` method on that instance. It then uses this root reducer to
-create the Redux store. Optionally you can pass the initial state as the third argument
-and it will be assigned to the new store, or, if you leave it out, redux will send an
-INIT action to the new store to initialize it.
+There you go!
 
-If you need the store, you can just grab it from `app.store`:
+In this example we are linking the api reducer as the sole root reducer.
+But in fact it's a reducer just like any other so we are able to combine
+it together with other reducers using redux's `combineReducers`, or any
+of the other methods available.
 
-```js
-const store = app.store;
-```
+In the same way, here we are using the vanilla `createStore` from redux,
+but we could boost that with middleware in exactly the same way we always
+do with redux. `redux-api` is just another component, latching onto the
+redux store with a plain old reducer function. Simple!
 
-Here's the cool thing. `app` will be an `instanceof RootApi`, but it will have all methods and
-properties of `AppApi`, so it functions as a transparent proxy. Assuming the `AppApi` introduced
-above, with properties `leftDrawer` and `rightDrawer`, we will be able to call:
 
-```js
-app.rightDrawer.close();
-```
-and it will just work.
-
-Why would we go through all this trouble with a `RootApi` object acting as a proxy? Why not just
-attach the store to the `AppApi` directly? Because of Hot Module Replacement.
-
-### Use the root API with Hot Module Replacement
+### Use redux-apis with Hot Module Replacement
 The Redux store holds all the state of the application, so we don't want to destroy it, as this
 is essentially the same as completely reloading our (single page) application. But we want to be
 able to replace the Api bound to the store, because that will contain our work-in-progress
-application code. This is where the `RootApi` comes in. When we create it, it's constructor calls
-`bind` to bind the Api we provided and create proxies for it's methods and properties. But we can
-actually call this method directly as well. It will cleanup the proxies for the old Api, and then
-bind the new Api in it's place.
+application code. Fortunately for us, Redux stores have a `replaceReducer` method that will let
+us replace the root reducer with a different one, without having to recreate the store. This
+means we can make a `const` store object and publish it to the world, as it won't change during
+the lifetime of the application.
 
 Using this information, here is how we can do Hot Module Replacement with `redux-apis`:
 
 ```js
 import { createStore } from 'redux';
-import { RootApi } from 'redux-apis';
+import { link } from 'redux-apis';
 
 // use require i.s.o import
-// don't use const as this component will be replaced
+// don't use const as these components will be replaced
 let AppApi = require('./AppApi').default;
+let app = new AppApi();
+let reducer = app.handle.bind(app);
 
-// app object can be const. We can share it with the world, export it etc
-const app = new RootApi(AppApi, createStore);
-export default app;
+// store object can be const. We can share it with the world, export it etc
+const store = createStore(reducer);
+link(store, app);
+export default store;
 
 if (module.hot) {
     module.hot.accept('./AppApi', function(){
-		app.bind(require('./AppApi').default);
+		// re-create and re-link app object
+		AppApi = require('./AppApi').default;
+		app = new AppApi();
+		reducer = app.handle.bind(app);
+		link(store, app);
     });
 }
 ```
 
 Easy isn't it? Our store's state survives! The app will continue exactly where it left off,
 but with our new code loaded into it.
+
 
 ## Examples
 
@@ -319,8 +400,55 @@ npm run examples
 to run them.
 
 
+## Start hacking
+I invite you to hack on the examples a bit. It's probably the easiest way to get started.
+Clone / fork this repo, then `cd` into the project root and invoke
+
+```sh
+npm install
+```
+
+Then, start a webpack development server by invoking
+
+```sh
+npm run examples-dev
+
+> redux-apis@0.10.0 examples-dev C:\ws\redux-apis
+> webpack-dev-server --context examples --output-file-name examples.js "mocha!./index.jsx" --content-base examples --port 8889
+
+http://localhost:8889/webpack-dev-server/
+webpack result is served from /
+content is served from C:\ws\redux-apis\examples
+Hash: 787073c1aebbf09f2440
+Version: webpack 1.12.11
+Time: 8784ms
+            Asset    Size  Chunks             Chunk Names
+    redux-apis.js  570 kB       0  [emitted]  main
+redux-apis.js.map  693 kB       0  [emitted]  main
+webpack: bundle is now VALID.
+```
+
+Point your browser to http://localhost:8889/webpack-dev-server/ and you should see the mocha test suite,
+with all tests passing.
+
+Now open the source files in the `examples` folder in your favourite text editor.
+Make some changes and save. You should see the page hot-reload. Start hacking away!
+
+
+## Feedback, suggestions, questions, bug
+Please visit the [issue tracker](https://github.com/Download/redux-apis/issues) for any of the above.
+Don't be afraid about being off-topc.
+Constructive feedback most appreciated!
+
+
+## Credits
+My thanks to Reactiflux Discord user `coldster` for his constructive criticism that lead me to
+rethink my Api and resulted in a much cleaner, better thought out approach.
+
+
 ## Copyright
 © 2016, [Stijn de Witt](http://StijnDeWitt.com). Some rights reserved.
+
 
 ## License
 [Creative Commons Attribution 4.0 (CC-BY-4.0)](https://creativecommons.org/licenses/by/4.0/)
