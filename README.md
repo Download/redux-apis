@@ -1,9 +1,10 @@
-# redux-apis <sub><sup>v0.10.0</sup></sub>
+﻿# redux-apis <sub><sup>v0.10.1</sup></sub>
 
 **Helpers for creating Redux-aware APIs**
 
 
 ## Installation
+
 ```sh
 npm install --save redux-apis
 ```
@@ -13,7 +14,7 @@ npm install --save redux-apis
 
 * [Create APIs](#create-apis)
 * [Compose existing APIs into new ones](#compose-existing-apis-into-new-ones)
-* [Link the top-level Api to a Redux store](#link-the-top-level-Api-to-a-redux-store)
+* [Link the top-level Api to a Redux store](#link-the-top-level-api-to-a-redux-store)
 * [Use redux-apis with Hot Module Replacement](#use-redux-apis-with-hot-module-replacement)
 
 ### Create APIs
@@ -34,9 +35,9 @@ An Api automatically gets it's own private slice of the Redux state tree, access
 
 ```js
 export default class DrawerApi extends Api {
-	isOpen() {
-		return this.getState().open;
-	}
+  isOpen() {
+    return this.getState().open;
+  }
 }
 ```
 
@@ -45,13 +46,13 @@ that initial state. We do so by adding a constructor with a default value for th
 
 ```js
 export default class DrawerApi extends Api {
-	constructor(state = { open: false }) {
-		super(state);
-	}
+  constructor(state = { open: false }) {
+    super(state);
+  }
 
-	isOpen() {
-		return this.getState().open;
-	}
+  isOpen() {
+    return this.getState().open;
+  }
 }
 ```
 
@@ -59,44 +60,44 @@ To manipulate the state tree, we provide methods that create and dispatch an act
 
 ```js
 export default class DrawerApi extends Api {
-	constructor(state = { open: false }) {
-		super(state);
-	}
+  constructor(state = { open: false }) {
+    super(state);
+  }
 
-	isOpen() {
-		return this.getState().open;
-	}
+  isOpen() {
+    return this.getState().open;
+  }
 
-	open() {
-		this.dispatch(this.createAction('OPEN')());
-	}
+  open() {
+    this.dispatch(this.createAction('OPEN')());
+  }
 }
 ```
 
 Note the second pair of braces in the call to `createAction`. This pattern is copied from
-[redux-actions](https://github.com/acdlite/redux-actions)... Heck, the code itself is copied
-from `redux-actions`! ;) The resulting actions follow the [Flux Standard Actions]
-(https://github.com/acdlite/flux-standard-action) format.
+[redux-actions](https://github.com/acdlite/redux-actions)... Heck, the code itself is
+copied from `redux-actions`! ;) The resulting actions follow the
+[Flux Standard Action](https://github.com/acdlite/flux-standard-action) format.
 
 We then register *handlers* for these actions in the constructor:
 
 ```js
 export default class DrawerApi extends Api {
-	constructor(state = { open: false }) {
-		super(state);
+  constructor(state = { open: false }) {
+    super(state);
 
-		this.setHandler('OPEN', function handleOpen(state, action) {
-			return { ...state, open: true };
-		});
-	}
+    this.setHandler('OPEN', function handleOpen(state, action) {
+      return { ...state, open: true };
+    });
+  }
 
-	isOpen() {
-		return this.getState().open;
-	}
+  isOpen() {
+    return this.getState().open;
+  }
 
-	open() {
-		this.dispatch(this.createAction('OPEN')());
-	}
+  open() {
+    this.dispatch(this.createAction('OPEN')());
+  }
 }
 ```
 
@@ -112,23 +113,23 @@ code a bit more elegant:
 
 ```js
 export default class DrawerApi extends Api {
-	constructor(state = { open: false }) {
-		super(state);
-		this.addHandler('OPEN', (state, action) => ({ ...state, open: true }));
-		this.addHandler('CLOSE', (state, action) => ({ ...state, open: false }));
-	}
+  constructor(state = { open: false }) {
+    super(state);
+    this.addHandler('OPEN', (state, action) => ({ ...state, open: true }));
+    this.addHandler('CLOSE', (state, action) => ({ ...state, open: false }));
+  }
 
-	isOpen() {
-		return this.getState().open;
-	}
+  isOpen() {
+    return this.getState().open;
+  }
 
-	open() {
-		this.dispatch(this.createAction('OPEN')());
-	}
+  open() {
+    this.dispatch(this.createAction('OPEN')());
+  }
 
-	close() {
-		this.dispatch(this.createAction('CLOSE')());
-	}
+  close() {
+    this.dispatch(this.createAction('CLOSE')());
+  }
 }
 ```
 
@@ -164,6 +165,7 @@ console.assert(leftDrawer.isOpen() === true, 'The left drawer should be open');
 
 
 ### Compose existing APIs into new ones
+
 Because each Api has it's own state slice, we can easily use the same Api multiple times.
 We use the function `link(parent, child, link = apiLink)` for this purpose.
 
@@ -172,11 +174,11 @@ import Api, { link } from 'redux-apis';
 import DrawerApi from './DrawerApi';
 
 class AppApi extends Api {
-	constructor(state) {
-		super(state);
-		this.leftDrawer = link(this, new DrawerApi());
-		this.rightDrawer = link(this, new DrawerApi());
-	}
+  constructor(state) {
+    super(state);
+    this.leftDrawer = link(this, new DrawerApi());
+    this.rightDrawer = link(this, new DrawerApi());
+  }
 }
 
 const app = new AppApi().init();
@@ -186,12 +188,12 @@ That's it! `app` now automatically has a state tree that looks like this:
 
 ```js
 {
-	leftDrawer: {
-		open: false,
-	},
-	rightDrawer: {
-		open: false,
-	},
+  leftDrawer: {
+    open: false,
+  },
+  rightDrawer: {
+    open: false,
+  },
 }
 ```
 
@@ -228,11 +230,11 @@ from the state slice. This creates a 1 to 1 mapping:
 
 ```js
 class AppApi extends Api {
-	constructor(state) {
-		super(state);
-		this.leftDrawer = link(this, new DrawerApi());
-		this.rightDrawer = link(this, new DrawerApi());
-	}
+  constructor(state) {
+    super(state);
+    this.leftDrawer = link(this, new DrawerApi());
+    this.rightDrawer = link(this, new DrawerApi());
+  }
 }
 ```
 
@@ -240,12 +242,12 @@ maps to
 
 ```js
 {
-	leftDrawer: {
-		open: false,
-	},
-	rightDrawer: {
-		open: false,
-	},
+  leftDrawer: {
+    open: false,
+  },
+  rightDrawer: {
+    open: false,
+  },
 }
 ```
 
@@ -257,13 +259,15 @@ the state key `drawer` instead of `leftDrawer`. We could do this:
 
 ```js
 class AppApi extends Api {
-	constructor(state) {
-		super(state);
-		this.leftDrawer = link(this, new DrawerApi(), (parentState, childState) =>
-			childState === undefined ? parentState.drawer : parentState.drawer = childState;
-		);
-		this.rightDrawer = link(this, new DrawerApi());
-	}
+  constructor(state) {
+    super(state);
+    this.leftDrawer = link(this, new DrawerApi(),
+      (parentState, childState) => childState === undefined
+          ? parentState.drawer
+          : parentState.drawer = childState;
+    );
+    this.rightDrawer = link(this, new DrawerApi());
+  }
 }
 ```
 
@@ -271,12 +275,12 @@ maps to
 
 ```js
 {
-	drawer: {
-		open: false,
-	},
-	rightDrawer: {
-		open: false,
-	},
+  drawer: {
+    open: false,
+  },
+  rightDrawer: {
+    open: false,
+  },
 }
 ```
 
@@ -285,14 +289,16 @@ have done this:
 
 ```js
 class AppApi extends Api {
-	constructor(state) {
-		super(state);
-		this.leftDrawer = link(this, new DrawerApi(), (parentState, childState) =>
-			childState === undefined ? parentState[this.alias] : parentState[this.alias] = childState;
-		);
-		this.leftDrawer.alias = 'drawer';
-		this.rightDrawer = link(this, new DrawerApi());
-	}
+  constructor(state) {
+    super(state);
+    this.leftDrawer = link(this, new DrawerApi(),
+      (parentState, childState) => childState === undefined
+        ? parentState[this.alias]
+        : parentState[this.alias] = childState;
+    );
+    this.leftDrawer.alias = 'drawer';
+    this.rightDrawer = link(this, new DrawerApi());
+  }
 }
 ```
 
@@ -304,9 +310,9 @@ are reducers and `Api.handle` acts like a generic reducer routing the incoming a
 registered handlers. This is very convenient for testing. But using Redux has many advantages.
 There is a lot of `middleware` available for it; small pieces of code that hook into the redux
 control flow. Things like [redux-thunk](https://github.com/gaearon/redux-thunk) to allow us to
-run code whenever an action is dispatched (for async handling for example) and [redux-logger]
-(https://github.com/fcomb/redux-logger) that allows us to log all dispatched actions. Also,
-redux gives us a subscription model for listening to store events.
+run code whenever an action is dispatched (for async handling for example) and
+[redux-logger](https://github.com/fcomb/redux-logger) that allows us to log all dispatched actions.
+Also, redux gives us a subscription model for listening to store events.
 
 Here's how we hook an API to a redux store:
 
@@ -347,15 +353,16 @@ but we could boost that with middleware in exactly the same way we always
 do with redux. `redux-api` is just another component, latching onto the
 redux store with a plain old reducer function. Simple!
 
-
 ### Use redux-apis with Hot Module Replacement
-The Redux store holds all the state of the application, so we don't want to destroy it, as this
-is essentially the same as completely reloading our (single page) application. But we want to be
-able to replace the Api bound to the store, because that will contain our work-in-progress
-application code. Fortunately for us, Redux stores have a `replaceReducer` method that will let
-us replace the root reducer with a different one, without having to recreate the store. This
-means we can make a `const` store object and publish it to the world, as it won't change during
-the lifetime of the application.
+
+The Redux store holds all the state of the application, so we don't want to
+destroy it, as this is essentially the same as completely reloading our
+(single page) application. But we want to be able to replace the Api bound
+to the store, because that will contain our work-in-progress application code.
+Fortunately for us, Redux stores have a `replaceReducer` method that will let
+us replace the root reducer with a different one, without having to recreate
+the store. This means we can make a `const` store object and publish it to the
+world, as it won't change during the lifetime of the application.
 
 Using this information, here is how we can do Hot Module Replacement with `redux-apis`:
 
@@ -375,19 +382,19 @@ link(store, app);
 export default store;
 
 if (module.hot) {
-    module.hot.accept('./AppApi', () => {
-		// re-create and re-link app object
-		AppApi = require('./AppApi').default;
-		app = new AppApi();
-		reducer = app.handle.bind(app);
-		store.replaceReducer(reducer);
-		link(store, app);
-    });
+  module.hot.accept('./AppApi', () => {
+    // re-create and re-link app object
+    AppApi = require('./AppApi').default;
+    app = new AppApi();
+    reducer = app.handle.bind(app);
+    store.replaceReducer(reducer);
+    link(store, app);
+  });
 }
 ```
 
-Easy isn't it? Our store's state survives! The app will continue exactly where it left off,
-but with our new code loaded into it.
+Easy isn't it? Our store's state survives! The app will continue exactly where it
+left off, but with our new code loaded into it.
 
 
 ## Examples
@@ -402,8 +409,8 @@ to run them.
 
 
 ## Start hacking
-I invite you to hack on the examples a bit. It's probably the easiest way to get started.
-Clone / fork this repo, then `cd` into the project root and invoke
+I invite you to hack on the examples a bit. It's probably the easiest way to get
+started. Clone / fork this repo, then `cd` into the project root and invoke
 
 ```sh
 npm install
@@ -428,27 +435,32 @@ Time: 8784ms
 redux-apis.js.map  693 kB       0  [emitted]  main
 webpack: bundle is now VALID.
 ```
+<sup><sub>(Don't worry about those file sizes, that is due to the debug
+/ hot reloading code. `redux-apis.min.js` weighs in at just 1.526 bytes
+minified and gzipped)</sub></sup>
 
-Point your browser to http://localhost:8889/webpack-dev-server/ and you should see the mocha test suite,
-with all tests passing.
+Point your browser to http://localhost:8889/webpack-dev-server/ and you
+should see the mocha test suite, with all tests passing.
 
-Now open the source files in the `examples` folder in your favourite text editor.
-Make some changes and save. You should see the page hot-reload. Start hacking away!
+Now open the source files in the `examples` folder in your favourite
+text editor. Make some changes and save. You should see the page hot-reload.
+Start hacking away!
 
 
-## Feedback, suggestions, questions, bug
-Please visit the [issue tracker](https://github.com/Download/redux-apis/issues) for any of the above.
-Don't be afraid about being off-topc.
+## Feedback, suggestions, questions, bugs
+Please visit the [issue tracker](https://github.com/Download/redux-apis/issues)
+for any of the above. Don't be afraid about being off-topc.
 Constructive feedback most appreciated!
 
 
 ## Credits
-My thanks to Reactiflux Discord user `coldster` for his constructive criticism that lead me to
-rethink my Api and resulted in a much cleaner, better thought out approach.
+My thanks to Reactiflux Discord user `coldster` for his constructive
+criticism that lead me to rethink the API and resulted in a much cleaner,
+better thought out approach.
 
 
 ## Copyright
-� 2016, [Stijn de Witt](http://StijnDeWitt.com). Some rights reserved.
+© 2016, [Stijn de Witt](http://StijnDeWitt.com). Some rights reserved.
 
 
 ## License
