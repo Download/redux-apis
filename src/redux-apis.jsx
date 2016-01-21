@@ -1,5 +1,5 @@
 ﻿// stolen from https://github.com/acdlite/redux-actions/blob/v0.9.0/src/createAction.js
-function createAction(type, actionCreator, metaCreator) {
+export function createAction(type, actionCreator, metaCreator) {
   const finalActionCreator = typeof actionCreator === 'function' ? actionCreator : (t) => t;
   return (...args) => {
     const action = {type, payload:finalActionCreator(...args)};
@@ -9,124 +9,99 @@ function createAction(type, actionCreator, metaCreator) {
   };
 }
 
-export default class Api {
+export function childName(parent, child) {
+	for (name of Object.keys(parent)) {
+		if (parent[name] === child) return name;
+	}
+}
+
+export function apiLink(parentState, childState) {
+	return childState === undefined
+		? parentState[childName(this.__parent, this)]
+		: parentState[childName(this.__parent, this)] = childState;
+}
+
+export function storeLink(parentState, childState) {
+	return childState === undefined
+		? parentState
+		: childState;
+}
+
+export function createReducer(api, link = storeLink) {
+	api.__link = link.bind(api);
+	return (state, action) => api.handle(api.__link(state), action);
+}
+
+export function link(parent, child, link = apiLink) {
+	child.__parent = parent;
+	child.__link = child.__link || link.bind(child);
+	return child;
+}
+
+export class Api {
 	constructor(state) {
-		Object.defineProperty(this, 'state', {
-			get: function() {
-				if (this.parent) {
-					const name = childName(this.parent, this);
-					return name ? this.parent.state && this.parent.state[name] : this.parent.state;
-				}
-				if (this.store) {
-					var result = this.store.getState();
-					return result;
-				}
-				return state;
-			},
-			set: function(value) {
-				if (!this.parent && !this.store) {
-					state = value;
-				}
-			}
+		var handlers = {};
+		Object.defineProperties(this, {
+			__actionHandlers: { value: {} },
+			__getState: { value: () => state },
+			__dispatch: { value: (action) => {
+				if (typeof action == 'function') {return action(this.dispatch.bind(this), this.getState.bind(this));}
+				state = this.handle(this.getState(), action);
+				return action;
+			}},
+			__parent: { value: undefined, writable: true },
+			__link: { value: undefined, writable: true },
 		});
-
-		this.__handlers = {};
-	}
-
-	init() {
-		this.dispatch(this.createAction('@@redux-apis/INIT')());
-		return this;
-	}
-
-	sub(name, api) {
-		this[name] = new api();
-		this[name].parent = this;
-	}
-
-	createAction(actionType, actionCreator, metaCreator) {
-		let name = childName(this.parent, this);
-		if (name) {
-			return this.parent.createAction(name + '/' + actionType, actionCreator, metaCreator);
-		}
-		return createAction(actionType, actionCreator, metaCreator);
 	}
 
 	dispatch(action) {
-		if (this.parent) {return this.parent.dispatch(action);}
-		if (this.store) {return this.store.dispatch(action);}
-		if (typeof action == 'function') {return action(this.dispatch.bind(this), () => this.state);}
-		this.state = this.handle(action);
-		return action;
+		return this.__parent ? this.__parent.dispatch(action) : this.__dispatch(action);
+	}
+
+	getState() {
+		return this.__parent ? this.__link(this.__parent.getState()) : this.__getState();
+	}
+
+	createAction(actionType, payloadCreator, metaCreator) {
+		return this.__parent
+				? this.__parent.createAction(childName(this.__parent, this) + '/' + actionType, payloadCreator, metaCreator)
+				: createAction(actionType, payloadCreator, metaCreator);
+	}
+
+	setHandler(actionType, handler) {
+		this.__actionHandlers[actionType] = handler;
+	}
+
+	clearHandler(actionType) {
+		delete this.__actionHandlers[actionType];
+	}
+
+	handle(state, action) {
+		const idx = action.type.indexOf('/');
+		const subAction = idx !== -1 && action.type.substring(0, idx);
+		const subs = Object.keys(this).filter(key => this[key] instanceof Api2);
+		let result = this.__actionHandlers[action.type]
+			? this.__actionHandlers[action.type].call(this, state, action)
+			: (state === undefined ? this.initialState() : undefined);
+		subs.forEach(sub => {
+			const act = sub !== subAction ? action : {...action, type:action.type.substring(idx + 1)};
+			const subState = this[sub].handle(this[sub].getState(), act);
+			if (state === undefined || this[sub].getState() !== subState) {
+				if (result === undefined) {result = { ...state };}
+				this[sub].__link(result, subState);
+			}
+		});
+		return result || state;
 	}
 
 	initialState() {
 		return {};
 	}
 
-	handle(action) {
-		const idx = action.type.indexOf('/');
-		const sub = idx !== -1 && action.type.substring(0, idx);
-		const subs = Object.keys(this);
-		let result = typeof this.__handlers[action.type] == 'function'
-			? this.__handlers[action.type].call(this, action)
-			: this.state || this.initialState()
-		if (result === this.state) {result = undefined;}
-		for (let i=0,key; key=subs[i]; i++) {
-			if (key != 'parent' && this[key] instanceof Api) {
-				let act = key !== sub ? action : {...action, type:action.type.substring(idx + 1)};
-				let subState = this[key].handle(act);
-				if (!this.state || this.state[key] !== subState) {
-					result ? result[key] = subState : result = {...this.state, [key]:subState};
-				}
-			}
-		}
-		return result || this.state;
-	}
-
-	addHandler(actionType, handler) {
-		this.__handlers[actionType] = handler;
+	init() {
+		this.dispatch(this.createAction('@@redux/INIT')());
+		return this;
 	}
 }
 
-export class RootApi extends Api {
-	constructor(api, createStore, initialState) {
-		super();
-		this.bind(api);
-		let reducer = (state, action) => {
-			return !this.store && state ? state : this.__api.handle(action);
-		}
-		this.store = createStore(reducer, initialState);
-	}
-
-	bind(api) {
-		if (this.__api) {
-			apiKeys(this.__api).forEach((key) => delete this[key]);
-			Object.keys(api).forEach((key) => delete RootApi[key]);
-		}
-		this.__api = new api();
-		apiKeys(this.__api).forEach((key) => {
-			this[key] = typeof this.__api[key] == 'function'
-				? this.__api[key].bind(this.__api)
-				: this.__api[key];
-		});
-		Object.keys(api).forEach((key) => RootApi[key] = api[key]);
-		this.__api.parent = this;
-	}
-}
-
-var RESERVED = Object.getOwnPropertyNames(Object.getPrototypeOf(new Api()))
-	.concat(['parent', 'bind']);
-
-function childName(parent, child) {
-	if (parent && (! (parent instanceof RootApi))) {
-		const siblings = Object.keys(parent);
-		for (let i=0,name; name=siblings[i]; i++) {
-			if (parent[name] === child) {return name;}
-		}
-	}
-}
-
-function apiKeys(obj) {
-	return Object.getOwnPropertyNames(Object.getPrototypeOf(obj)).concat(Object.keys(obj))
-		.filter(function(key){return RESERVED.indexOf(key) === -1;});
-}
+export default Api;
