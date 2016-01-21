@@ -375,11 +375,12 @@ link(store, app);
 export default store;
 
 if (module.hot) {
-    module.hot.accept('./AppApi', function(){
+    module.hot.accept('./AppApi', () => {
 		// re-create and re-link app object
 		AppApi = require('./AppApi').default;
 		app = new AppApi();
 		reducer = app.handle.bind(app);
+		store.replaceReducer(reducer);
 		link(store, app);
     });
 }
