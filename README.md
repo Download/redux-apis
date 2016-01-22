@@ -1,4 +1,4 @@
-﻿# redux-apis <sub><sup>v0.10.1</sup></sub>
+﻿# redux-apis <sub><sup>v0.10.2</sup></sub>
 
 **Helpers for creating Redux-aware APIs**
 
@@ -454,7 +454,7 @@ Constructive feedback most appreciated!
 
 
 ## Credits
-My thanks to Reactiflux Discord user `coldster` for his constructive
+My thanks to [David Lents](https://github.com/dlents) for his constructive
 criticism that lead me to rethink the API and resulted in a much cleaner,
 better thought out approach.
 
