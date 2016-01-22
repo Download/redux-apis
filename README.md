@@ -1,4 +1,6 @@
-﻿# redux-apis <sub><sup>v0.10.2</sup></sub>
+﻿![version](https://img.shields.io/npm/v/redux-apis.svg) ![license](https://img.shields.io/npm/l/redux-apis.svg) [![Package Quality](http://npm.packagequality.com/shield/redux-apis.svg)](http://packagequality.com/#?package=redux-apis) ![installs](https://img.shields.io/npm/dt/redux-apis.svg) ![downloads](https://img.shields.io/github/downloads/Download/redux-apis/latest/total.svg) ![build](https://img.shields.io/travis/download/redux-apis.svg)
+
+# redux-apis <sub><sup>v0.10.3</sup></sub>
 
 **Helpers for creating Redux-aware APIs**
 
