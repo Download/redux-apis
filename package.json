@@ -1,6 +1,6 @@
 {
   "name": "redux-apis",
-  "version": "0.11.0",
+  "version": "0.11.1",
   "description": "Helpers to create Redux-aware API's",
   "main": "lib/redux-apis.min.js",
   "babel": {
@@ -20,7 +20,7 @@
     "build": "npm run build-umd && npm run build-min",
     "build-test": "webpack --context src --output-path lib --output-filename redux-apis.spec.js \"./redux-apis.spec.jsx\" && mocha \"lib/redux-apis.spec.js\" ",
     "release": "npm run build && npm run build-test",
-    "test": "mocha --require babel-register \"src/**/*spec.jsx\"",
+    "test": "mocha --require src/test-helper.js \"src/**/*spec.jsx\"",
     "test-dev": "webpack-dev-server --context src \"mocha!./redux-apis.spec.jsx\" --content-base test --port 8888",
     "examples": "mocha --require babel-register \"examples/**/*spec.jsx\"",
     "examples-dev": "webpack-dev-server --context examples --output-file-name examples.js \"mocha!./index.jsx\" --content-base examples --port 8889"
@@ -50,6 +50,7 @@
     "babel-loader": "^6.2.1",
     "babel-plugin-transform-class-properties": "^6.4.0",
     "babel-plugin-transform-decorators-legacy": "^1.3.4",
+    "babel-polyfill": "^6.3.14",
     "babel-preset-es2015": "^6.3.13",
     "babel-preset-react": "^6.3.13",
     "babel-preset-stage-0": "^6.3.13",

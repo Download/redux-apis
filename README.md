@@ -1,6 +1,6 @@
 ﻿![version](https://img.shields.io/npm/v/redux-apis.svg) ![license](https://img.shields.io/npm/l/redux-apis.svg) ![installs](https://img.shields.io/npm/dt/redux-apis.svg) ![build](https://img.shields.io/travis/Download/redux-apis.svg) ![mind BLOWN](https://img.shields.io/badge/mind-BLOWN-ff69b4.svg)
 
-# redux-apis <sub><sup>v0.11.0</sup></sub>
+# redux-apis <sub><sup>v0.11.1</sup></sub>
 
 **Helpers for creating Redux-aware APIs**
 
@@ -11,6 +11,10 @@
 npm install --save redux-apis
 ```
 
+<sub><sup>*NOTE* When using redux-apis on older versions of Node, or older browsers that
+don't support `Promise`s, make sure to install a Promise polyfill as well.
+This library is tested on Node JS 0.10, as can be seen in the [.travis.yml](.travis.yml)
+config file, using [babel-polyfill](https://babeljs.io/docs/usage/polyfill/).</sub></sup>
 
 ## Usage
 
@@ -446,6 +450,14 @@ class App extends React.Component {
   }
 }
 ```
+
+<sub><sup>*NOTE:* The spec for ES decorators in still in flux. Due to this,
+Babel 6 has temporarily removed support from their core presets. For this
+reason, if you are using Babel 6, you should install the Babel plugin
+[babel-plugin-transform-decorators-legacy](https://github.com/loganfsmyth/babel-plugin-transform-decorators-legacy)
+which restores the functionality from Babel 5 until the spec is finalized
+and we (maybe) have to change our code to match it (although I doubt it
+will change for our use case, which is very simple).</sup></sub>
 
 #### load(components, params)
 The function we passed to `@onload` is not called by itself.
