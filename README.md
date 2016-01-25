@@ -582,7 +582,7 @@ redux-apis.js.map  693 kB       0  [emitted]  main
 webpack: bundle is now VALID.
 ```
 <sup><sub>(Don't worry about those file sizes, that is due to the debug
-/ hot reloading code. `redux-apis.min.js` weighs in at just 1.526 bytes
+/ hot reloading code. `redux-apis.min.js` weighs in at just ~2kB
 minified and gzipped)</sub></sup>
 
 Point your browser to http://localhost:8889/webpack-dev-server/ and you
