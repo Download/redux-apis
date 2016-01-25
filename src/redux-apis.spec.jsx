@@ -1,6 +1,12 @@
 ﻿import { expect } from 'chai';
-import { createStore } from 'redux';
-import { Api, link, createReducer } from './redux-apis';
+import log from 'picolog';
+import { createStore, applyMiddleware } from 'redux';
+import thunk from 'redux-thunk';
+import React, { Component } from 'react';
+import { renderToString } from 'react-dom/server';
+import { match, Route, RouterContext, createMemoryHistory } from 'react-router';
+import { connect, Provider } from 'react-redux';
+import { Api, link, onload, load, Async } from './redux-apis';
 
 describe('Api', () => {
 	it('is a class that serves as a base class for redux-aware API\'s', () => {
@@ -79,7 +85,7 @@ describe('Api', () => {
 		});
 		it('does not have to be called when using redux', () => {
 			const myApi = new MyApi();
-			const store = createStore(myApi.handle.bind(myApi));
+			const store = createStore(myApi.reducer);
 			link(store, myApi);
 			expect(myApi).to.have.a.property('getState');
 			expect(myApi.getState).to.be.a('function');
@@ -204,22 +210,81 @@ describe('Api', () => {
 		});
 	});
 
-	describe('.handle(state, action)', () => {
+	describe('.connector(state, ownProps)', () => {
+		it('is a function available on instances of Api', () => {
+			const myApi = new Api();
+			expect(myApi.connector).to.be.a('function');
+		});
+
+		it('is auto-bound to it\'s Api instance', () => {
+			const myApi = new Api({state:'OK'});
+			const myApi2 = new Api({state:'WRONG'});
+			const test = myApi.connector.bind(myApi2)();
+			expect(test).to.be.an('object');
+			expect(test).to.have.a.property('state');
+			expect(test.state).to.equal('OK');
+		});
+
+		it('can be used in combination with the @connect decorator from react-redux', () => {
+			class MyApi extends Api {
+				constructor(state = {message:'Hello, World!'}) {
+					super(state);
+				}
+			}
+
+			const app = new MyApi();
+
+			@connect(app.connector)
+			class App extends Component {
+			  render() {
+				const { message } = this.props;
+				return (
+					<p>{message}</p>
+				);
+			  }
+			}
+
+			const store = createStore(app.reducer);
+			store.app = link(store, app);
+
+			let markup = renderToString(<Provider store={store}><App /></Provider>);
+			log.info(markup);
+			expect(markup).to.contain('Hello, World!');
+		});
+	});
+
+	describe('.reducer(state, action)', () => {
 		it('is a function available on instances of Api', () => {
 			class MyApi extends Api {};
 			const myApi = new MyApi();
-			expect(myApi.handle).to.be.a('function');
+			expect(myApi.reducer).to.be.a('function');
+		});
+
+		it('is auto-bound to it\'s Api instance', () => {
+			let boundInstance = null;
+			class MyApi extends Api {
+				reducer(...args) {
+					boundInstance = this;
+					super.reducer(...args);
+				}
+			}
+			const myApi = new MyApi();
+			const myApi2 = new MyApi();
+			myApi.reducer.bind(myApi2)(undefined, {type:'SOME_ACTION'});
+			expect(boundInstance).to.be.an('object');
+			expect(boundInstance).to.be.an.instanceof(Api);
+			expect(boundInstance).to.equal(myApi);
 		});
 
 		it('is called for each action that is dispatched to this api tree', () => {
 			let called = false;
 			class MyApi extends Api {
-				handle(state, action) {
+				reducer(state, action) {
 					expect(action).to.not.equal(undefined);
 					expect(action).to.have.a.property('type');
 					expect(action.type).to.equal('TEST');
 					called = true;
-					super.handle(state, action);
+					super.reducer(state, action);
 				}
 			};
 			const myApi = new MyApi();
@@ -301,7 +366,7 @@ describe('link(parent, child, link/*(parentState,childState)*/ )', () => {
 		class MyApi extends Api {
 			constructor(state) {
 				super(state);
-				this.handleCalled = 0;
+				this.reducerCalled = 0;
 				this.nested = link(this, new SubApi());
 				this.setHandler('TEST', (state, action) => {
 					return { ...state, test:action.payload };
@@ -310,35 +375,35 @@ describe('link(parent, child, link/*(parentState,childState)*/ )', () => {
 			test(msg) {
 				return this.dispatch(this.createAction('TEST')(msg));
 			}
-			handle(state, action) {
-				this.handleCalled++;
-				return super.handle(state, action);
+			reducer(state, action) {
+				this.reducerCalled++;
+				return super.reducer(state, action);
 			}
 		};
 		let myApi = new MyApi();
-		expect(myApi.handleCalled).to.equal(0);
-		let store = createStore(myApi.handle.bind(myApi), {custom:'state'});
+		expect(myApi.reducerCalled).to.equal(0);
+		let store = createStore(myApi.reducer, {custom:'state'});
 		link(store, myApi);
 		expect(store).to.be.an('object');
 		expect(store.getState()).to.have.a.property('nested');
 		expect(store.getState().nested).to.have.a.property('sub');
 		expect(store.getState().nested.sub).to.equal('api');
-		expect(myApi.handleCalled).to.equal(1);
+		expect(myApi.reducerCalled).to.equal(1);
 		myApi.test('MESSAGE');
-		expect(myApi.handleCalled).to.equal(2);
+		expect(myApi.reducerCalled).to.equal(2);
 		expect(store.getState()).to.have.a.property('test');
 		expect(store.getState().test).to.equal('MESSAGE');
 		expect(store.getState().test).to.equal(myApi.getState().test);
 
 		myApi = new MyApi();
-		expect(myApi.handleCalled).to.equal(0);
-		store = createStore(myApi.handle.bind(myApi), {nested: 'test'});
+		expect(myApi.reducerCalled).to.equal(0);
+		store = createStore(myApi.reducer, {nested: 'test'});
 		link(store, myApi);
 		expect(store.getState()).to.have.a.property('nested');
 		expect(store.getState().nested).to.equal('test');
 		expect(myApi.nested.getState()).to.equal('test');
 		myApi.test('MESSAGE');
-		expect(myApi.handleCalled).to.equal(2);
+		expect(myApi.reducerCalled).to.equal(2);
 		expect(store.getState()).to.have.a.property('test');
 		expect(store.getState().test).to.equal('MESSAGE');
 		expect(store.getState().test).to.equal(myApi.getState().test);
@@ -346,7 +411,7 @@ describe('link(parent, child, link/*(parentState,childState)*/ )', () => {
 	it('ignores the optional `link` parameter when the parent is a redux store', () => {
 		const expected = 'wow a custom state link!';
 		const myApi = new Api({custom: expected});
-		let store = createStore(myApi.handle.bind(myApi));
+		let store = createStore(myApi.reducer);
 		link(store, myApi, (state, subState) => subState ? state.custom = subState : state.custom);
 		expect(myApi.getState()).to.have.a.property('custom');
 		expect(myApi.getState().custom).to.equal(expected);
@@ -370,6 +435,148 @@ describe('link(parent, child, link/*(parentState,childState)*/ )', () => {
 		expect(myApi.getState()[0]).to.equal('1st');
 		expect(myApi.getState()[1]).to.equal('2nd');
 		expect(myApi.getState()[2]).to.equal('3rd');
+	});
+});
+
+describe('@onload(fn/*(params)*/ )', () => {
+	it('can be used to decorate a component with a function to be called on load', () => {
+		@onload(() => {})
+		class MyComponent{}
+		expect(MyComponent).to.have.a.property('onload');
+		expect(MyComponent.onload).to.be.a('function');
+	});
+	it('can be used to decorate a component wrapped by `@connect` from react-redux', () => {
+		@onload(() => {})
+		@connect(() => {})
+		class OnLoadFirst{}
+		expect(OnLoadFirst).to.have.a.property('onload');
+		expect(OnLoadFirst.onload).to.be.a('function');
+
+		@connect(() => {})
+		@onload(() => {})
+		class OnLoadLast{}
+		expect(OnLoadLast).to.have.a.property('onload');
+		expect(OnLoadLast.onload).to.be.a('function');
+	});
+});
+
+
+describe('load(components, params)', () => {
+	it('can be used to call the load functions on the given components', () => {
+		let componentALoaded = false;
+		@onload(() => {componentALoaded = true;})
+		class ComponentA {}
+		load([ComponentA]);
+		expect(componentALoaded).to.equal(true);
+	});
+	it('captures promises and returns a promise that fulfills once loading is complete', () => {
+		let componentALoaded = false;
+		@onload(() => {componentALoaded = true;})
+		class ComponentA {}
+
+		let componentBLoading = false;
+		let componentBLoaded = false;
+		@onload(() => {
+			componentBLoading = true;
+			return new Promise((resolve, reject) => {
+				setTimeout(() => {
+					componentBLoading = false;
+					componentBLoaded = true;
+					resolve();
+				}, 0);
+			});
+		})
+		class ComponentB {}
+		let promise = load([ComponentA, ComponentB]);
+		expect(componentALoaded).to.equal(true);
+		expect(componentBLoaded).to.equal(false);
+		expect(componentBLoading).to.equal(true);
+		promise.then(() => {
+			expect(componentBLoading).to.equal(false);
+			expect(componentBLoaded).to.equal(true);
+		});
+	});
+	it('can be used for server-side rendering with react', () => {
+		class MyApi extends Api {
+			constructor(state = {async:'PENDING', results:[]}) {
+				super(state);
+				this.setHandler('PENDING', (state, action) => ({...state, async:'PENDING'}));
+				this.setHandler('BUSY', (state, action) => ({...state, async:'BUSY'}));
+				this.setHandler('DONE', (state, action) => ({...state, async:'DONE'}));
+				this.setHandler('SET_RESULTS', (state, action) => ({...state, results:action.payload}));
+				this.run = this.run.bind(this);
+			}
+
+			pending() {return this.getState().async === 'PENDING';}
+			busy() {return this.getState().async === 'BUSY';}
+			done() {return this.getState().async === 'DONE';}
+			results() {return this.getState().results;}
+
+			setPending() {return this.dispatch(this.createAction('PENDING')());}
+			setBusy() {return this.dispatch(this.createAction('BUSY')());}
+			setDone() {return this.dispatch(this.createAction('DONE')());}
+			setResults(results) {return this.dispatch(this.createAction('SET_RESULTS')(results));}
+
+			run() {return this.dispatch(() => {
+				expect(this.pending()).to.equal(true);
+				expect(this.busy()).to.equal(false);
+				expect(this.done()).to.equal(false);
+				this.setBusy();
+				expect(this.pending()).to.equal(false);
+				expect(this.busy()).to.equal(true);
+				expect(this.done()).to.equal(false);
+				return Promise.resolve(['Many', 'cool', 'products']).then((results) => {
+					this.setDone();
+					expect(this.pending()).to.equal(false);
+					expect(this.busy()).to.equal(false);
+					expect(this.done()).to.equal(true);
+					this.setResults(results);
+				});
+			});}
+		}
+
+		const app = new MyApi();
+
+		@onload(app.run)
+		@connect(app.connector)
+		class App extends Component {
+		  render() {
+			// 2. access data as props
+			const { async, results, api } = this.props;
+			return (
+				<div>
+					<p>{
+						async === 'PENDING' ? 'Pending...' : (
+						async === 'BUSY' ? 'Busy...' : results)
+					}</p>
+				</div>
+			);
+		  }
+		}
+
+		const routes = (<Route path="/" component={App}/>);
+		const history = createMemoryHistory();
+		const store = applyMiddleware(thunk)(createStore)(app.reducer);
+		store.app = link(store, app);
+
+		match({ routes, location: '/' }, (err, redirect, renderProps) => {
+			let markup = renderToString(<Provider store={store}><RouterContext {...renderProps} /></Provider>);
+			log.info('Before loading: ', markup);
+			expect(markup).to.contain('Pending...');
+
+			let loaded = load(renderProps.components, renderProps.params);
+			markup = renderToString(<Provider store={store}><RouterContext {...renderProps} /></Provider>);
+			log.info('During loading: ', markup);
+			expect(markup).to.contain('Busy...');
+
+			loaded.then(() => {
+				markup = renderToString(<Provider store={store}><RouterContext {...renderProps} /></Provider>);
+				log.info('After loading: ', markup);
+				expect(markup).to.contain('Many');
+				expect(markup).to.contain('cool');
+				expect(markup).to.contain('products');
+			});
+		});
 	});
 });
 

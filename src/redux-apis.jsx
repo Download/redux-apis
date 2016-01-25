@@ -5,13 +5,14 @@
 			__state: { value:state, writable:true },
 			__dispatch: { value: (action) => {
 				if (typeof action == 'function') {return action(this.dispatch.bind(this), this.getState.bind(this));}
-				state = this.handle(state, action);
+				state = this.reducer(state, action);
 				return action;
 			}},
 			__parent: { value: undefined, writable: true },
 			__link: { value: undefined, writable: true },
+			connector: { value: this.connector.bind(this) },
+			reducer: { value: this.reducer.bind(this) },
 		});
-
 	}
 
 	init() {
@@ -43,7 +44,11 @@
 		delete this.__actionHandlers[actionType];
 	}
 
-	handle(state, action) {
+	connector(state, ownProps) {
+		return { ...this.getState(), ...ownProps, api:this };
+	}
+
+	reducer(state, action) {
 		const idx = action.type.indexOf('/');
 		const subAction = idx !== -1 && action.type.substring(0, idx);
 		let result = this.__actionHandlers[action.type]
@@ -52,7 +57,7 @@
 		const subs = Object.keys(this).filter(key => this[key] instanceof Api);
 		subs.forEach(sub => {
 			const act = sub !== subAction ? action : {...action, type:action.type.substring(idx + 1)};
-			const subResult = this[sub].handle(this[sub].__link(state), act);
+			const subResult = this[sub].reducer(this[sub].__link(state), act);
 			if (state === undefined || this[sub].__link && this[sub].__link(state) === undefined || this[sub].getState() !== subResult) {
 				if (result === undefined) {
 					result = state instanceof Array
@@ -65,13 +70,23 @@
 		return this.__state = result || state;
 	}
 }
-
 export default Api;
 
 export function link(parent, child, link = apiLink) {
 	child.__parent = parent;
 	if (parent instanceof Api) child.__link = link.bind(child);
 	return child;
+}
+
+export function onload(fn) {
+	return Component => {Component.onload = fn;	return Component;};
+}
+
+export function load(components, params) {
+	return Promise.all(components
+		.filter(component => component.onload)
+		.map(component => component.onload(params))
+		.filter(result => result instanceof Promise));
 }
 
 function apiLink(parentState, childState) {

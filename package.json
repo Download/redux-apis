@@ -1,12 +1,17 @@
 {
   "name": "redux-apis",
-  "version": "0.10.3",
+  "version": "0.11.0",
   "description": "Helpers to create Redux-aware API's",
   "main": "lib/redux-apis.min.js",
   "babel": {
     "presets": [
       "es2015",
-      "stage-0"
+      "stage-0",
+      "react"
+    ],
+    "plugins": [
+      "transform-decorators-legacy",
+      "transform-class-properties"
     ]
   },
   "scripts": {
@@ -43,18 +48,23 @@
   "devDependencies": {
     "babel-core": "^6.3.26",
     "babel-loader": "^6.2.1",
+    "babel-plugin-transform-class-properties": "^6.4.0",
+    "babel-plugin-transform-decorators-legacy": "^1.3.4",
     "babel-preset-es2015": "^6.3.13",
+    "babel-preset-react": "^6.3.13",
     "babel-preset-stage-0": "^6.3.13",
     "babel-register": "^6.3.13",
     "chai": "^3.4.1",
-    "gulp": "^3.9.0",
-    "gulp-babel": "^6.1.1",
-    "gulp-sourcemaps": "^1.6.0",
-    "gulp-util": "^3.0.7",
     "mocha": "^2.3.4",
     "mocha-loader": "^0.7.1",
     "path": "^0.12.7",
+    "picolog": "^1.0.0",
+    "react": "^0.14.6",
+    "react-dom": "^0.14.6",
+    "react-redux": "^4.0.6",
+    "react-router": "^2.0.0-rc5",
     "redux": "^3.0.5",
+    "redux-thunk": "^1.0.3",
     "source-map-support": "^0.4.0",
     "webpack": "^1.12.11",
     "webpack-dev-server": "^1.14.1"
