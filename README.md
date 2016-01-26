@@ -1,6 +1,6 @@
 ﻿![version](https://img.shields.io/npm/v/redux-apis.svg) ![license](https://img.shields.io/npm/l/redux-apis.svg) ![installs](https://img.shields.io/npm/dt/redux-apis.svg) ![build](https://img.shields.io/travis/Download/redux-apis.svg) ![mind BLOWN](https://img.shields.io/badge/mind-BLOWN-ff69b4.svg)
 
-# redux-apis <sub><sup>v0.11.2</sup></sub>
+# redux-apis <sub><sup>v0.13.0</sup></sub>
 
 **Helpers for creating Redux-aware APIs**
 
@@ -23,7 +23,8 @@ config file, using [babel-polyfill](https://babeljs.io/docs/usage/polyfill/).</s
 * [Compose existing APIs into new ones](#compose-existing-apis-into-new-ones)
 * [Link the top-level Api to a Redux store](#link-the-top-level-api-to-a-redux-store)
 * [Use redux-apis with React components](#use-redux-apis-with-react-components)
-* [Server-side rendering with redux-apis](#server-side-rendering-with-redux-apis)
+* [Async actions with redux-async-api](#async-actions-with-redux-async-api)
+* [Server-side rendering with redux-load-api](#server-side-rendering-with-redux-load-api)
 * [Use redux-apis with Hot Module Replacement](#use-redux-apis-with-hot-module-replacement)
 
 
@@ -34,6 +35,8 @@ of Redux and React. Read [Share your Api](#share-your-api) at the bottom of this
 to learn how to contribute and get your Api listed here.
 
 * [redux-async-api](https://www.npmjs.com/package/redux-async-api)
+* [redux-fetch-api](https://www.npmjs.com/package/redux-fetch-api)
+* [redux-load-api](https://www.npmjs.com/package/redux-load-api)
 
 
 ### Create your own APIs
@@ -441,75 +444,104 @@ class App extends React.Component {
 }
 ```
 
-### Server-side rendering with redux-apis
-redux-apis offers two more functions, designed to simplify server-side rendering
-of React components: `@onload` and `load`.
+### Async actions with redux-async-api
 
-#### @onload(fn/*(params)*/ )
-Often, we want to load some data into our redux-store before rendering our React
-component. With the `@onload` [decorator](https://github.com/wycats/javascript-decorators),
-we can associate a loader function with our component. This function will recieve
-a `params` object as a parameter, containing the URL parameters it may need:
+redux-apis is a good fit for when you need to perform async actions, such as remote server
+calls (also keep an eye on [redux-fetch-api](https://github.com/download/redux-fetch-api)
+for isomorphic fetch). In the spirit with the rest of this library and redux, we build on
+top of the basic building blocks for async with redux: [thunk](https://github.com/gaearon/redux-thunk)
+and [Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise).
+
+Using `onload` and `load` from `redux-load-api` (see next chapter) we can attach loader functions
+to (React) components and wait for the promises they return to fulfill. All we need then, is
+some mechanism to keep track of the state of the async operation in the redux store.
+
+Enter `Async`:
+
+```js
+class MyAsync extends Async {
+  static INITIAL_STATE = { ...Async.INITIAL_STATE, result:'pending...' };
+
+  constructor(state = MyAsync.INITIAL_STATE) {
+    super(state);
+    this.setHandler('SET_RESULT', (state, action) => ({...state, result:action.payload}));
+  }
+
+  result() {
+    return this.getState().result;
+  }
+
+  setResult(result) {
+    return this.dispatch(this.createAction('SET_RESULT')(result));
+  }
+
+  run() {
+    this.setBusy();
+    this.setResult('busy...');
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        this.setDone();
+        this.setResult('Done!');
+        return resolve();
+      }, 0);
+    });
+  }
+}
+```
+
+As you can see we only need to implement our business-specific logic and can
+just call `Async`'s setters to update the async state flag.
+
+For more information refer to [redux-async-api](https://github.com/download/redux-async-api).
+
+
+### Server-side rendering with redux-load-api
+The community package [redux-load-api](https://npmjs.com/package/redux-load-api) offers two
+functions designed to simplify server-side rendering of React components: `@onload` and `load`.
+
+These allow us to do this:
 
 ```js
 class AppApi extends Api {someFunc(someParam){}}
 const app = new AppApi({someState:'some state'});
 
+// decorate the `App` component with an onload
+// function that calls `app.someFunc`
 @onload(params => app.someFunc(params.someParam))
+@connect(app.connector)
 class App extends React.Component {
+  render() {
     // ...
   }
 }
 ```
 
-<sub><sup>*NOTE:* The spec for ES decorators in still in flux. Due to this,
-Babel 6 has temporarily removed support from their core presets. For this
-reason, if you are using Babel 6, you should install the Babel plugin
-[babel-plugin-transform-decorators-legacy](https://github.com/loganfsmyth/babel-plugin-transform-decorators-legacy)
-which restores the functionality from Babel 5 until the spec is finalized
-and we (maybe) have to change our code to match it (although I doubt it
-will change for our use case, which is very simple).</sup></sub>
-
-#### load(components, params)
-The function we passed to `@onload` is not called by itself.
-Instead, we cause it to be executed explicitly by calling
-`load`:
-
-```js
-// assuming App component from previous example...
-const components = [App];
-load(components, {someParam: 'Some parameter'});
-```
-
-`load` can easily be used in combination with React Router:
+Later, we can fire all load actions *and wait for them to complete* before
+we render the page, assuring we sent a fully hydrated page to the client.
+Assuming we are using react-router, it might look something like this:
 
 ```js
 match({ routes, location:req.url }, (err, redirect, renderProps) => {
-  load(renderProps.components, renderProps.params);
-
-  // at this point, the `load` function has been called on
-  // those components matched by `match` that were decorated with `onload`
+  if (renderProps) {
+    // load finds all components decorated with `@onload`, calls the
+    // load functions and collects any promises returned by them. it
+    // then returns a promise that will fullfill once loading completes
+    load(renderProps.components, renderProps.params).then(() => {
+      // at this point, the loader functions have been called on
+      // those components matched by `match` that were decorated
+      // with `onload` and any returned promises have been fulfilled.
+    });
+  }
+  else {
+    // redirect, error etc... refer to react-router docs
+  }
 });
 ```
 
-To support async loading (e.g. fetching from DB or remote server), you
-use redux with async behavior in the same way you normally do (e.g. with
-[redux-thunk](https://github.com/gaearon/redux-thunk)), making sure your
-loader function returns a `Promise`. `load` will return this promise so
-we can wait for it to fulfill using it's `then`:
+Naturally, `@onload` and `load` mesh well with `redux-async-api` (previous chapter).
 
-```js
-match({ routes, location:req.url }, (err, redirect, renderProps) => {
-  load(renderProps.components, renderProps.params).then(() => {
-    // at this point, the loader functions have been called on
-    // those components matched by `match` that were decorated
-    // with `onload` and any returned promises have been fulfilled.
-  });
-});
-```
-
-For an example of server-side rendering with redux, redux-thunk, react,
-react-router, redux-react and redux-apis, refer to the unit tests.
+Refer to the documentation of [redux-load-api](https://github.com/Download/redux-load-api)
+for more details.
 
 
 ### Use redux-apis with Hot Module Replacement

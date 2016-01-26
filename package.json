@@ -1,6 +1,6 @@
 {
   "name": "redux-apis",
-  "version": "0.11.2",
+  "version": "0.13.0",
   "description": "Helpers to create Redux-aware API's",
   "main": "lib/redux-apis.min.js",
   "babel": {
@@ -21,9 +21,9 @@
     "build-test": "webpack --context src --output-path lib --output-filename redux-apis.spec.js \"./redux-apis.spec.jsx\" && mocha \"lib/redux-apis.spec.js\" ",
     "release": "npm run build && npm run build-test",
     "test": "mocha --require src/test-helper.js \"src/**/*spec.jsx\"",
-    "test-dev": "webpack-dev-server --context src \"mocha!./redux-apis.spec.jsx\" --content-base test --port 8888",
+    "test-dev": "webpack-dev-server --context src \"mocha!./redux-apis.spec.jsx\" --output-filename redux-apis.spec.js --content-base test --port 8888",
     "examples": "mocha --require babel-register \"examples/**/*spec.jsx\"",
-    "examples-dev": "webpack-dev-server --context examples --output-file-name examples.js \"mocha!./index.jsx\" --content-base examples --port 8889"
+    "examples-dev": "webpack-dev-server --context examples --output-filename redux-apis.examples.js \"mocha!./index.jsx\" --content-base examples --port 8889"
   },
   "keywords": [
     "redux",
@@ -63,7 +63,6 @@
     "react": "^0.14.6",
     "react-dom": "^0.14.6",
     "react-redux": "^4.0.6",
-    "react-router": "^2.0.0-rc5",
     "redux": "^3.0.5",
     "redux-thunk": "^1.0.3",
     "source-map-support": "^0.4.0",
