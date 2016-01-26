@@ -1,6 +1,6 @@
 ﻿![version](https://img.shields.io/npm/v/redux-apis.svg) ![license](https://img.shields.io/npm/l/redux-apis.svg) ![installs](https://img.shields.io/npm/dt/redux-apis.svg) ![build](https://img.shields.io/travis/Download/redux-apis.svg) ![mind BLOWN](https://img.shields.io/badge/mind-BLOWN-ff69b4.svg)
 
-# redux-apis <sub><sup>v0.11.1</sup></sub>
+# redux-apis <sub><sup>v0.11.2</sup></sub>
 
 **Helpers for creating Redux-aware APIs**
 
@@ -18,14 +18,25 @@ config file, using [babel-polyfill](https://babeljs.io/docs/usage/polyfill/).</s
 
 ## Usage
 
-* [Create APIs](#create-apis)
+* [Use Apis shared by the community](#use-apis-shared-by-the-community)
+* [Create your own APIs](#create-your-own-apis)
 * [Compose existing APIs into new ones](#compose-existing-apis-into-new-ones)
 * [Link the top-level Api to a Redux store](#link-the-top-level-api-to-a-redux-store)
 * [Use redux-apis with React components](#use-redux-apis-with-react-components)
 * [Server-side rendering with redux-apis](#server-side-rendering-with-redux-apis)
 * [Use redux-apis with Hot Module Replacement](#use-redux-apis-with-hot-module-replacement)
 
-### Create APIs
+
+### Use Apis shared by the community
+
+I'm hoping for `redux-apis` to become a community-driven project to further the use
+of Redux and React. Read [Share your Api](#share-your-api) at the bottom of this page
+to learn how to contribute and get your Api listed here.
+
+* [redux-async-api](https://www.npmjs.com/package/redux-async-api)
+
+
+### Create your own APIs
 
 `redux-apis` let's us create APIs that will feel very natural to consuming code and that completely
 hide that redux is being used under the hood.
@@ -543,7 +554,7 @@ Easy isn't it? Our store's state survives! The app will continue exactly
 where it left off, but with our new code loaded into it.
 
 
-## Examples
+### Examples
 
 Check out the `examples` folder for some examples including tests. Invoke
 
@@ -554,7 +565,8 @@ npm run examples
 to run them.
 
 
-## Start hacking
+### Start hacking
+
 I invite you to hack on the examples a bit. It's probably the easiest way to get
 started. Clone / fork this repo, then `cd` into the project root and invoke
 
@@ -591,6 +603,23 @@ should see the mocha test suite, with all tests passing.
 Now open the source files in the `examples` folder in your favourite
 text editor. Make some changes and save. You should see the page hot-reload.
 Start hacking away!
+
+
+### Share your apis
+
+Built something great? Share it with the community and get it [listed]((#use-apis-shared-by-the-community)) on this repo.
+
+* Name your package `redux-PACKAGENAME-api`
+* Add the keyword `redux-apis` to the `keywords` section in `package.json`
+* Publish your package to NPM
+* Create a new issue here saying 'add package XYZ' or something like that
+* Fork this repo and clone it to your machine
+* Create and switch to a new branch
+* Update this README, adding your package to the list
+* Commit your changes, mentioning the full URL to the issue you created before in the commit comment
+* Push to GitHub
+* Create a Pull Request, mentioning the issue in the PR comment
+* I will review your PR and merge it in
 
 
 ## Feedback, suggestions, questions, bugs
