@@ -687,7 +687,7 @@ text editor. Make some changes and save. You should see the page hot-reload.
 Start hacking away!
 
 
-### Share your apis
+### Share your api
 
 Built something great? Share it with the community and get it [listed]((#use-apis-shared-by-the-community)) on this repo.
 
