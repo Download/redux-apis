@@ -730,7 +730,7 @@ My thanks goes out to these people. They are the giants on whose shoulders this 
 * [Paul O’Shannessy](https://github.com/zpao) and countless other individuals giving us
    [react](https://github.com/facebook/react).
 * [Mateusz Zatorski](https://github.com/knowbody) for helping me on Discord.
-* (Yaroslav Sergievsky)[https://github.com/everdimension], for giving me feedback and contributing the
+* [Yaroslav Sergievsky](https://github.com/everdimension), for giving me feedback and contributing the
    TwoStores example.
 
 
