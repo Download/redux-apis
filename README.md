@@ -1,6 +1,6 @@
 ﻿![version](https://img.shields.io/npm/v/redux-apis.svg) ![license](https://img.shields.io/npm/l/redux-apis.svg) ![installs](https://img.shields.io/npm/dt/redux-apis.svg) ![build](https://img.shields.io/travis/Download/redux-apis.svg) ![mind BLOWN](https://img.shields.io/badge/mind-BLOWN-ff69b4.svg)
 
-# redux-apis <sub><sup>v0.12.1</sup></sub>
+# redux-apis <sub><sup>v0.12.2</sup></sub>
 
 **Helpers for creating Redux-aware APIs**
 
@@ -23,6 +23,7 @@ config file, using [babel-polyfill](https://babeljs.io/docs/usage/polyfill/).</s
 * [Compose existing APIs into new ones](#compose-existing-apis-into-new-ones)
 * [Link the top-level Api to a Redux store](#link-the-top-level-api-to-a-redux-store)
 * [Use redux-apis with React components](#use-redux-apis-with-react-components)
+* [Scoped isomorphic fetch with redux-fetch-api](#scoped-isomorphic-fetch-with-redux-fetch-api)
 * [Async actions with redux-async-api](#async-actions-with-redux-async-api)
 * [Server-side rendering with redux-load-api](#server-side-rendering-with-redux-load-api)
 * [Use redux-apis with Hot Module Replacement](#use-redux-apis-with-hot-module-replacement)
@@ -444,6 +445,55 @@ class App extends React.Component {
 }
 ```
 
+### Scoped isomorphic fetch with redux-fetch-api
+Often, we want to fetch data from a remote server. Our api should be mapped to some remote
+endpoint. We also see that remote endpoints tend to be hierarchically structured:
+```
+http://example.com/api
+http://example.com/api/products
+http://example.com/api/products/details
+http://example.com/api/products/create
+http://example.com/api/products/update
+http://example.com/api/people
+http://example.com/api/people/search
+etc
+```
+
+`redux-fetch-api` is a small library designed to work well with redux-apis,
+that allows you to decorate your apis with a scoped, isomorphic `fetch` method.
+
+Using the tools from `redux-fetch-api`, we can map our api hierarchy onto a
+remote endpoint very easily:
+
+```js
+@remote
+class Module extends Api {
+  doIt() {
+    return this.fetch('/something');
+  }
+}
+
+@remote('http://example.com')
+class App extends Api {
+  constructor(state) {
+    super(state);
+    this.moduleA = remote('/modA')(
+		link(this, new Module())
+	);
+    this.moduleB = remote('/modB')(
+		link(this, new Module())
+	);
+  }
+}
+
+const app = new App().init();
+app.moduleA.doIt(); // fetches 'http://example.com/modA/something'
+app.moduleB.doIt(); // fetches 'http://example.com/modB/something'
+```
+
+Check out [redux-fetch-api](https://www.npmjs.com/package/redux-fetch-api) for more details.
+
+
 ### Async actions with redux-async-api
 
 redux-apis is a good fit for when you need to perform async actions, such as remote server
@@ -680,8 +730,9 @@ My thanks goes out to these people. They are the giants on whose shoulders this 
 * [Paul O’Shannessy](https://github.com/zpao) and countless other individuals giving us
    [react](https://github.com/facebook/react).
 * [Mateusz Zatorski](https://github.com/knowbody) for helping me on Discord.
-* Discord channel #redux user `everdimension`, for giving me feedback and contributing the
+* (Yaroslav Sergievsky)[https://github.com/everdimension], for giving me feedback and contributing the
    TwoStores example.
+
 
 ## Copyright
 © 2016, [Stijn de Witt](http://StijnDeWitt.com). Some rights reserved.
