@@ -1,6 +1,6 @@
 ﻿![version](https://img.shields.io/npm/v/redux-apis.svg) ![license](https://img.shields.io/npm/l/redux-apis.svg) ![installs](https://img.shields.io/npm/dt/redux-apis.svg) ![build](https://img.shields.io/travis/Download/redux-apis.svg) ![mind BLOWN](https://img.shields.io/badge/mind-BLOWN-ff69b4.svg)
 
-# redux-apis <sub><sup>v0.12.0</sup></sub>
+# redux-apis <sub><sup>v0.12.1</sup></sub>
 
 **Helpers for creating Redux-aware APIs**
 
@@ -655,16 +655,33 @@ Built something great? Share it with the community and get it [listed]((#use-api
 
 
 ## Feedback, suggestions, questions, bugs
-Please visit the [issue tracker](https://github.com/Download/redux-apis/issues)
-for any of the above. Don't be afraid about being off-topc.
+Please visit the [issue tracker](https://github.com/download/redux-apis/issues)
+for any of the above. Don't be afraid about being off-topic.
 Constructive feedback most appreciated!
 
 
 ## Credits
-My thanks to [David Lents](https://github.com/dlents) for his constructive
-criticism that lead me to rethink the API and resulted in a much cleaner,
-better thought out approach.
-
+My thanks goes out to these people. They are the giants on whose shoulders this library stands.
+* [Dan Abramov](https://github.com/gaearon) for inventing the fantastic
+   [redux](https://github.com/rackt/redux) state container and his great work on hot-reloading.
+* [Andrew Clarke](https://github.com/acdlite) for [redux-actions](https://github.com/acdlite/redux-actions)
+   and [flux-standard-action](https://github.com/acdlite/flux-standard-action), defining a convention
+   for action objects that this library follows.
+* [Tim Dorr](https://github.com/timdorr), [Ryan Florence](https://github.com/ryanflorence),
+   [Michael Jackson](https://github.com/mjackson) and [Jimmy Jia](https://github.com/taion) for
+   their awesome work on [react-router](https://github.com/rackt/react-router).
+* [Tobias Koppers](https://github.com/sokra) for the wonderful and versatile
+   [webpack](https://github.com/webpack/webpack), and for his patience answering n00b webpack questions.
+* [David Lents](https://github.com/dlents) for his constructive criticism that lead me to rethink the
+   API and resulted in a much cleaner, better thought out approach.
+* [Erik Rasmussen](https://github.com/erikras) for
+   [react-redux-universal-hot-example](https://github.com/erikras/react-redux-universal-hot-example),
+   which provided great insight into setting up a universal app with react and redux.
+* [Paul O’Shannessy](https://github.com/zpao) and countless other individuals giving us
+   [react](https://github.com/facebook/react).
+* [Mateusz Zatorski](https://github.com/knowbody) for helping me on Discord.
+* Discord channel #redux user `everdimension`, for giving me feedback and contributing the
+   TwoStores example.
 
 ## Copyright
 © 2016, [Stijn de Witt](http://StijnDeWitt.com). Some rights reserved.
