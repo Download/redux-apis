@@ -689,7 +689,7 @@ Start hacking away!
 
 ### Share your api
 
-Built something great? Share it with the community and get it [listed]((#use-apis-shared-by-the-community)) on this repo.
+Built something great? Share it with the community and get it [listed](#use-apis-shared-by-the-community) on this repo.
 
 * Name your package `redux-PACKAGENAME-api`
 * Add the keyword `redux-apis` to the `keywords` section in `package.json`
