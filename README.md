@@ -1,6 +1,6 @@
 ﻿![version](https://img.shields.io/npm/v/redux-apis.svg) ![license](https://img.shields.io/npm/l/redux-apis.svg) ![installs](https://img.shields.io/npm/dt/redux-apis.svg) ![build](https://img.shields.io/travis/Download/redux-apis.svg) ![mind BLOWN](https://img.shields.io/badge/mind-BLOWN-ff69b4.svg)
 
-# redux-apis <sub><sup>v0.12.2</sup></sub>
+# redux-apis <sub><sup>v1.0.0</sup></sub>
 
 **Helpers for creating Redux-aware APIs**
 
@@ -15,6 +15,7 @@ npm install --save redux-apis
 don't support `Promise`s, make sure to install a Promise polyfill as well.
 This library is tested on Node JS 0.10, as can be seen in the [.travis.yml](.travis.yml)
 config file, using [babel-polyfill](https://babeljs.io/docs/usage/polyfill/).</sub></sup>
+
 
 ## Usage
 
@@ -260,7 +261,7 @@ console.assert(app.leftDrawer.isOpen() === true, 'The left drawer should be open
 ```
 
 #### Action types are namespaced
-The axample above works, because `Api.createAction`, `Api.dispatch` and `Api.reducer` all follow
+The example above works, because `Api.createAction`, `Api.dispatch` and `Api.reducer` all follow
 the same naming conventions and are aware of the (state) hierarchy via the link created with the
 `link` function. When you call `createAction` with an `actionType` argument, it checks for a link
 to a parent Api and, if it's set, prepends the parent Api's name and a slash to the `actionType`
@@ -274,11 +275,11 @@ it actually resulted in an action being created with `actionType` equal to
 ```
 `dispatch` then passes that action along to it's parent, all the way to the top-level. From there,
 `reducer` is invoked and is doing the opposite; it's breaking the `actionType` apart into separate
-parts and routing the action to it's destination. Along the way, 'reducer' will be invoked on all nodes of the state tree. If it finds a registered
-handler for the action, it invokes that and returns it's result. Otherwise, it returns the current
-state, or, if that's not defined, invokes `initialState` and returns that. The side effect of this
-is that we can initialize the entire state tree by just sending it an action that it does not handle.
-This is exactly what `init()` does; it dispatches an action with type `'@@redux/INIT'`. Redux
+parts and routing the action to it's destination. Along the way, 'reducer' will be invoked on all
+nodes of the state tree. If it finds a registered handler for the action, it invokes that and returns
+it's result. Otherwise, it returns the current state, or the (default) initial state. The side effect
+of this is that we can initialize the entire state tree by just sending it an action that it does not handle.
+This is exactly what `init()` does; it dispatches an action with type `'@@redux/INIT'`. Redux itself
 does it exactly the same way.
 
 #### Api as a mini-store
@@ -405,8 +406,6 @@ the app object to the redux store, so dispatched actions will be routed to the r
 
 ```js
 link(store, app);
-// or, if you want convenient access to the app Api from the store:
-store.app = link(store, app);
 ```
 
 There you go!
@@ -416,10 +415,44 @@ But in fact it's a reducer just like any other so we are able to combine
 it together with other reducers using redux's `combineReducers`, or any
 of the other methods available.
 
-In the same way, here we are using the vanilla `createStore` from redux,
-but we could boost that with middleware in exactly the same way we always
-do with redux. `redux-api` is just another component, latching onto the
-redux store with a plain old reducer function. Simple!
+```js
+const reducer = combineReducers({
+	3rdparty: 3rdpartyReducer,
+	app: app.reducer,
+});
+
+export const store = createStore(reducer, data);
+```
+
+When the root Api is not mounted to the root of the redux store state tree,
+as in the example above where it is linked to the `'app'` key, we need to
+inform it on how to get it's own slice of the state tree. We can do this by
+providing a third argument to `link`, which is a function that gets/sets the
+child state from/into the parent state. We use `namedLink` here, which is a
+function that returns such a linker function based on a simple name:
+
+```js
+// link app to store, getting state from key 'app'
+link(store, app, namedLink('app'));
+```
+
+When we don't supply a third argument to `link`, the default `apiLink` is used. It just
+tries to find the child object among the parent's properties and then uses the name of
+that property as the key of the state slice. We can use this fact to simplify the above
+code to:
+
+```js
+// link(store, app, namedLink('app'));
+// equavalent to:
+store.app = link(store, app);
+// key name 'app' is implied from the fact that the app
+// is on a property named 'app' on the parent object.
+```
+
+We are currently using the vanilla `createStore` from redux, but we could boost that
+with middleware in exactly the same way we always do with redux. `redux-api` is just
+another component, latching onto the redux store with a plain old reducer function.
+Simple!
 
 
 ### Use redux-apis with React components
@@ -438,9 +471,9 @@ const app = new AppApi({someState:'some state'});
 @connect(app.connector)
 class App extends React.Component {
   render() {
-	const { someState } = this.props;
+	const { someState, api } = this.props;
 	// someState === 'some state'
-    // typeof this.props.api.someFunc === 'function'
+    // typeof api.someFunc == 'function'
   }
 }
 ```
@@ -496,7 +529,7 @@ Check out [redux-fetch-api](https://www.npmjs.com/package/redux-fetch-api) for m
 
 ### Async actions with redux-async-api
 
-redux-apis is a good fit for when you need to perform async actions, such as remote server
+redux-async-api is a good fit for when you need to perform async actions, such as remote server
 calls (also keep an eye on [redux-fetch-api](https://github.com/download/redux-fetch-api)
 for isomorphic fetch). In the spirit with the rest of this library and redux, we build on
 top of the basic building blocks for async with redux: [thunk](https://github.com/gaearon/redux-thunk)
@@ -529,6 +562,7 @@ class MyAsync extends Async {
     this.setBusy();
     this.setResult('busy...');
     return new Promise((resolve) => {
+	  // do async work, here simulated with `setTimeout`
       setTimeout(() => {
         this.setDone();
         this.setResult('Done!');
@@ -704,13 +738,21 @@ Built something great? Share it with the community and get it [listed](#use-apis
 * I will review your PR and merge it in
 
 
+## Documentation
+
+Please have a look at the [API documentation](docs/api.md).
+Work in progress. Pull requests welcome!
+
+
 ## Feedback, suggestions, questions, bugs
+
 Please visit the [issue tracker](https://github.com/download/redux-apis/issues)
 for any of the above. Don't be afraid about being off-topic.
 Constructive feedback most appreciated!
 
 
 ## Credits
+
 My thanks goes out to these people. They are the giants on whose shoulders this library stands.
 * [Dan Abramov](https://github.com/gaearon) for inventing the fantastic
    [redux](https://github.com/rackt/redux) state container and his great work on hot-reloading.
@@ -735,8 +777,10 @@ My thanks goes out to these people. They are the giants on whose shoulders this 
 
 
 ## Copyright
+
 © 2016, [Stijn de Witt](http://StijnDeWitt.com). Some rights reserved.
 
 
 ## License
+
 [Creative Commons Attribution 4.0 (CC-BY-4.0)](https://creativecommons.org/licenses/by/4.0/)

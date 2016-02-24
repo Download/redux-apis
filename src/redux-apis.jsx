@@ -20,32 +20,38 @@
 		return this;
 	}
 
-	dispatch(action) {
-		return this.__parent ? this.__parent.dispatch(action) : this.__dispatch(action);
-	}
-
 	getState() {
-		return this.__parent
-			? (this.__link ? this.__link(this.__parent.getState()) : this.__parent.getState())
+		return this.getParent()
+			? (this.__link ? this.__link(this.getParent().getState()) : this.getParent().getState())
 			: this.__state;
 	}
 
-	createAction(actionType, payloadCreator, metaCreator) {
-		return this.__parent instanceof Api
-				? this.__parent.createAction(childName(this.__parent, this) + '/' + actionType, payloadCreator, metaCreator)
-				: createAction(actionType, payloadCreator, metaCreator);
+	getParent() {
+		return this.__parent;
 	}
 
 	setHandler(actionType, handler) {
 		this.__actionHandlers[actionType] = handler;
 	}
 
-	clearHandler(actionType) {
-		delete this.__actionHandlers[actionType];
+	getHandler(actionType) {
+		return this.__actionHandlers[actionType];
 	}
 
-	connector(state, ownProps) {
-		return { ...this.getState(), ...ownProps, api:this };
+	clearHandler(actionType) {
+		const result = this.__actionHandlers[actionType];
+		delete this.__actionHandlers[actionType];
+		return result;
+	}
+
+	createAction(actionType, payloadCreator, metaCreator) {
+		return this.getParent() instanceof Api
+				? this.getParent().createAction(name(this) + '/' + actionType, payloadCreator, metaCreator)
+				: createAction(actionType, payloadCreator, metaCreator);
+	}
+
+	dispatch(action) {
+		return this.__parent ? this.__parent.dispatch(action) : this.__dispatch(action);
 	}
 
 	reducer(state, action) {
@@ -69,27 +75,35 @@
 		});
 		return this.__state = result || state;
 	}
+
+	connector(state, ownProps) {
+		return { ...ownProps, ...this.getState(), api:this };
+	}
 }
 export default Api;
 
 export function link(parent, child, link = apiLink) {
 	child.__parent = parent;
-	if (parent instanceof Api) child.__link = link.bind(child);
+	child.__link = link.bind(child);
 	return child;
 }
 
-function apiLink(parentState, childState) {
+export function apiLink(parentState, childState) {
+	const n = name(this);
 	return childState === undefined
-		? (typeof parentState == 'object' && this.__parent
-			? parentState[childName(this.__parent, this)]
-			: parentState)
-		: (typeof parentState == 'object' && this.__parent
-			? parentState[childName(this.__parent, this)] = childState
-			: childState)
+			? (parentState !== undefined && n ? parentState[n] : parentState)
+			: (n ? parentState[n] = childState : Object.assign(parentState, {...childState}));
 }
 
-function childName(parent, child) {
-	let names = Object.keys(parent);
+export function namedLink(name) {
+	return (parentState, childState) => childState === undefined
+			? (parentState !== undefined ? parentState[name] : undefined)
+			: parentState[name] = childState;
+}
+
+function name(child) {
+	const parent = child.getParent();
+	let names = parent ? Object.keys(parent) : [];
 	for (let i=0,name; name=names[i]; i++) {
 		if (parent[name] === child) return name;
 	}

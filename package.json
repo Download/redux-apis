@@ -1,6 +1,6 @@
 {
   "name": "redux-apis",
-  "version": "0.12.2",
+  "version": "1.0.0",
   "description": "Helpers to create Redux-aware API's",
   "main": "lib/redux-apis.min.js",
   "babel": {

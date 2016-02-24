@@ -5,7 +5,7 @@ import React, { Component } from 'react';
 import { renderToString } from 'react-dom/server';
 import { connect, Provider } from 'react-redux';
 
-import { Api, link } from './redux-apis';
+import { Api, link, apiLink, namedLink } from './redux-apis';
 
 describe('Api', () => {
 	it('is a class that serves as a base class for redux-aware API\'s', () => {
@@ -95,6 +95,56 @@ describe('Api', () => {
 		});
 	});
 
+	describe('.getState()', () => {
+		class MyApi extends Api {
+			constructor(state = {initial:'state'}){
+				super(state);
+			}
+		}
+
+		it('is a function available on instances of Api', () => {
+			const myApi = new MyApi();
+			expect(myApi.getState).to.be.a('function');
+		});
+
+		it('returns the current state for the Api object', () => {
+			const api1 = new MyApi();
+			const state1 = api1.getState();
+			expect(state1).to.be.an('object');
+			expect(state1).to.have.a.property('initial');
+			expect(state1.initial).to.equal('state');
+			const api2 = new MyApi({initial:'custom'});
+			const state2 = api2.getState();
+			expect(state2.initial).to.equal('custom');
+		});
+	});
+
+	describe('.getParent()', () => {
+		class MyApi extends Api {}
+
+		it('is a function available on instances of Api', () => {
+			const myApi = new MyApi();
+			expect(myApi.getParent).to.be.a('function');
+		});
+
+		it('returns the parent of the Api object', () => {
+			class Root extends Api {
+				constructor(state) {
+					super(state);
+					this.sub = link(this, new MyApi());
+				}
+			}
+			const root = new Root().init();
+			expect(root).to.have.a.property('getParent');
+			expect(root.getParent).to.be.a('function');
+			expect(root.sub).to.be.an('object');
+			expect(root.sub).to.have.a.property('getParent');
+			expect(root.sub.getParent).to.be.a('function');
+			expect(root.getParent()).to.equal(undefined);
+			expect(root.sub.getParent()).to.equal(root);
+		});
+	});
+
 	describe('.setHandler(actionType, handler/*(state,action)*/ )', () => {
 		it('is a function available on instances of Api', () => {
 			class MyApi extends Api {};
@@ -130,6 +180,25 @@ describe('Api', () => {
 			});
 			myApi.dispatch(myApi.createAction('TEST')());
 			expect(called).to.equal(true);
+		});
+	});
+
+	describe('.getHandler(actionType)', () => {
+		it('is a function available on instances of Api', () => {
+			class MyApi extends Api {};
+			const myApi = new MyApi();
+			expect(myApi.getHandler).to.be.a('function');
+		});
+		it('accepts an action type and returns any handler set for that action type', () => {
+			class MyApi extends Api {};
+			const myApi = new MyApi();
+			myApi.setHandler('TEST', function(){});
+			expect(myApi.__actionHandlers['TEST']).to.be.a('function');
+		});
+		it('returns `undefined` when no handler was set for the given action type', () => {
+			class MyApi extends Api {};
+			const myApi = new MyApi();
+			expect(myApi.getHandler('TEST')).to.equal(undefined);
 		});
 	});
 
@@ -244,7 +313,7 @@ describe('Api', () => {
 			}
 
 			const store = createStore(app.reducer);
-			store.app = link(store, app);
+			link(store, app);
 
 			let markup = renderToString(<Provider store={store}><App /></Provider>);
 			log.info(markup);
@@ -407,14 +476,6 @@ describe('link(parent, child, link/*(parentState,childState)*/ )', () => {
 		expect(store.getState().test).to.equal('MESSAGE');
 		expect(store.getState().test).to.equal(myApi.getState().test);
 	});
-	it('ignores the optional `link` parameter when the parent is a redux store', () => {
-		const expected = 'wow a custom state link!';
-		const myApi = new Api({custom: expected});
-		let store = createStore(myApi.reducer);
-		link(store, myApi, (state, subState) => subState ? state.custom = subState : state.custom);
-		expect(myApi.getState()).to.have.a.property('custom');
-		expect(myApi.getState().custom).to.equal(expected);
-	});
 	it('can be used to index state objects into a parent array', () => {
 		const indexLink = (idx) => (parentState, childState) => childState
 				? parentState[idx] = childState
@@ -437,3 +498,45 @@ describe('link(parent, child, link/*(parentState,childState)*/ )', () => {
 	});
 });
 
+describe('apiLink(parentState, childState)', () => {
+	it('is used as the default link from a child api to a parent api', () => {
+		class SubApi extends Api {};
+		class MyApi extends Api {
+			constructor(state) {
+				super(state);
+				this.nested = link(this, new SubApi());
+			}
+		};
+		const myApi = new MyApi({nested: 'test'});
+		expect(myApi).to.have.a.property('nested');
+		expect(myApi.nested).to.have.a.property('__link');
+		expect(myApi.nested.__link).to.be.a('function');
+		expect(myApi.nested.getState()).to.equal('test');
+	});
+});
+
+describe('namedLink(name)', () => {
+	it('it can be used to create a linker function to pass to `link`', () => {
+		const customLink = namedLink('custom');
+		expect(customLink).to.be.a('function');
+	});
+
+	it('it returns a function that gets the state slice with the given name', () => {
+		const customLink = namedLink('custom');
+		const test = customLink({custom:'test'});
+		expect(test).to.equal('test');
+	});
+
+	it('it can be used to customize the state link between a parent and child api', () => {
+		const customLink = namedLink('custom');
+		class SubApi extends Api {};
+		class MyApi extends Api {
+			constructor(state = {custom:'test'}) {
+				super(state);
+				this.nested = link(this, new SubApi(), customLink);
+			}
+		};
+		const myApi = new MyApi();
+		expect(myApi.nested.getState()).to.equal('test');
+	});
+});
