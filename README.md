@@ -417,7 +417,7 @@ of the other methods available.
 
 ```js
 const reducer = combineReducers({
-	3rdparty: 3rdpartyReducer,
+	thirdparty: thirdpartyReducer,
 	app: app.reducer,
 });
 
