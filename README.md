@@ -328,8 +328,8 @@ class AppApi extends Api {
     super(state);
     this.leftDrawer = link(this, new DrawerApi(),
       (parentState, childState) => childState === undefined
-          ? parentState.drawer
-          : parentState.drawer = childState;
+          ? parentState && parentState.drawer
+          : parentState.drawer = childState
     );
     this.rightDrawer = link(this, new DrawerApi());
   }
@@ -358,8 +358,8 @@ class AppApi extends Api {
     super(state);
     this.leftDrawer = link(this, new DrawerApi(),
       (parentState, childState) => childState === undefined
-        ? parentState[this.alias]
-        : parentState[this.alias] = childState;
+        ? parentState && parentState[this.alias]
+        : parentState[this.alias] = childState
     );
     this.leftDrawer.alias = 'drawer';
     this.rightDrawer = link(this, new DrawerApi());
@@ -478,7 +478,9 @@ class App extends React.Component {
 }
 ```
 
+
 ### Scoped isomorphic fetch with redux-fetch-api
+
 Often, we want to fetch data from a remote server. Our api should be mapped to some remote
 endpoint. We also see that remote endpoints tend to be hierarchically structured:
 ```
@@ -580,6 +582,7 @@ For more information refer to [redux-async-api](https://github.com/download/redu
 
 
 ### Server-side rendering with redux-load-api
+
 The community package [redux-load-api](https://npmjs.com/package/redux-load-api) offers two
 functions designed to simplify server-side rendering of React components: `@onload` and `load`.
 
@@ -610,7 +613,7 @@ match({ routes, location:req.url }, (err, redirect, renderProps) => {
     // load finds all components decorated with `@onload`, calls the
     // load functions and collects any promises returned by them. it
     // then returns a promise that will fullfill once loading completes
-    load(renderProps.components, renderProps.params).then(() => {
+    load(renderProps.routes.map(x => x.component), renderProps.params).then(() => {
       // at this point, the loader functions have been called on
       // those components matched by `match` that were decorated
       // with `onload` and any returned promises have been fulfilled.
