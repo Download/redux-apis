@@ -349,8 +349,8 @@ maps to
 }
 ```
 
-Inside the link function, you have access to the child element via the `this` keyword, so we could also
-have done this:
+Inside the link function, you have access to the child element via the `this`
+keyword, so we could also have done this:
 
 ```js
 class AppApi extends Api {
@@ -366,6 +366,22 @@ class AppApi extends Api {
   }
 }
 ```
+
+Finally, for this common scenario, there is a helper function `namedLink` that
+will create the linker function for us . We could have used it like this:
+
+```js
+class AppApi extends Api {
+  constructor(state) {
+    super(state);
+    this.leftDrawer = link(this, new DrawerApi(), namedLink('drawer'))
+    this.rightDrawer = link(this, new DrawerApi());
+  }
+}
+```
+
+Easy isn't it?
+
 
 ### Link the top-level Api to a Redux store
 
