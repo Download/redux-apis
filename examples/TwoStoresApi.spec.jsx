@@ -21,21 +21,21 @@ describe('Two stores', () => {
 
 		it('can react to actions on it\'s sub api', () => {
 			let another = new AnotherApi().init();
-			expect(another.drawer.isOpen()).to.equal(false);
+			expect(another.drawer.open).to.equal(false);
 			expect(another.drawerOpen()).to.equal(false);
 
-			another.drawer.open();
-			expect(another.drawer.isOpen()).to.equal(true);
+			another.drawer.openDrawer();
+			expect(another.drawer.open).to.equal(true);
 			expect(another.drawerOpen()).to.equal(true);
 		});
 
 		it('can dispatch actions to it\'s sub api', () => {
 			let another = new AnotherApi().init();
-			expect(another.drawer.isOpen()).to.equal(false);
+			expect(another.drawer.open).to.equal(false);
 			expect(another.drawerOpen()).to.equal(false);
 
 			another.openDrawer();
-			expect(another.drawer.isOpen()).to.equal(true);
+			expect(another.drawer.open).to.equal(true);
 			expect(another.drawerOpen()).to.equal(true);
 		});
 	});

@@ -21,9 +21,11 @@
 	}
 
 	getState() {
-		return this.getParent()
-			? (this.__link ? this.__link(this.getParent().getState()) : this.getParent().getState())
-			: this.__state;
+		let state;
+		if (this.getParent()) {
+			state = this.__link ? this.__link(this.getParent().getState()) : this.getParent().getState();
+		}
+		return state !== undefined ? state : this.__state;
 	}
 
 	getParent() {
@@ -77,7 +79,7 @@
 	}
 
 	connector(state, ownProps) {
-		return { ...ownProps, ...this.getState(), api:this };
+		return { ...ownProps, ...this.getState(), api:this, ...this };
 	}
 }
 export default Api;

@@ -1,6 +1,6 @@
 ﻿![version](https://img.shields.io/npm/v/redux-apis.svg) ![license](https://img.shields.io/npm/l/redux-apis.svg) ![installs](https://img.shields.io/npm/dt/redux-apis.svg) ![build](https://img.shields.io/travis/Download/redux-apis.svg) ![mind BLOWN](https://img.shields.io/badge/mind-BLOWN-ff69b4.svg)
 
-# redux-apis <sub><sup>v1.0.0</sup></sub>
+# redux-apis <sub><sup>v1.1.0</sup></sub>
 
 **Helpers for creating Redux-aware APIs**
 
@@ -10,12 +10,6 @@
 ```sh
 npm install --save redux-apis
 ```
-
-<sub><sup>*NOTE* When using redux-apis on older versions of Node, or older browsers that
-don't support `Promise`s, make sure to install a Promise polyfill as well.
-This library is tested on Node JS 0.10, as can be seen in the [.travis.yml](.travis.yml)
-config file, using [babel-polyfill](https://babeljs.io/docs/usage/polyfill/).</sub></sup>
-
 
 ## Usage
 
@@ -57,15 +51,20 @@ export default class DrawerApi extends Api {
 }
 ```
 
-#### Create inspectors
+#### Create properties
 An Api automatically gets it's own private slice of the Redux state tree, accessible via
-`this.getState()`. Using this we can easily implement 'inspectors'; methods that inspect,
-but do not manipulate, the state tree:
+`this.getState()`. But that state can often be very 'raw'. It should be in it's most
+'normalized' form (e.g. no derived state), which can make it hard to work with.
+By implementing properties that inspect, but do not manipulate, the state tree,
+we can make custom properties that are interesting to the outside world. We can make
+these properties read-only by only providing a getter for them, and we can make the
+'public' by specifying that they should be `enumerable`:
 
 ```js
 export default class DrawerApi extends Api {
-  isOpen() {
-    return this.getState().open;
+  constructor(state) {
+	super(state);
+	Object.defineProperty(this, 'open', {enumerable:true, get: () => this.getState().open});
   }
 }
 ```
@@ -74,16 +73,13 @@ The code above assumes that our state has a boolean flag `open`... But we need t
 that initial state.
 
 #### Provide initial state
-We provide initial state by adding a constructor with a default value for the `state` parameter:
+We provide initial state by setting a default value for the `state` parameter of the constructor:
 
 ```js
 export default class DrawerApi extends Api {
   constructor(state = { open: false }) {
     super(state);
-  }
-
-  isOpen() {
-    return this.getState().open;
+	Object.defineProperty(this, 'open', {enumerable:true, get: () => this.getState().open});
   }
 }
 ```
@@ -116,13 +112,10 @@ To manipulate the state tree, we provide methods that create and dispatch an act
 export default class DrawerApi extends Api {
   constructor(state = { open: false }) {
     super(state);
+	Object.defineProperty(this, 'open', {enumerable:true, get: () => this.getState().open});
   }
 
-  isOpen() {
-    return this.getState().open;
-  }
-
-  open() {
+  openDrawer() {
     this.dispatch(this.createAction('OPEN')());
   }
 }
@@ -140,17 +133,14 @@ We then register *handlers* for these actions in the constructor:
 export default class DrawerApi extends Api {
   constructor(state = { open: false }) {
     super(state);
+	Object.defineProperty(this, 'open', {enumerable:true, get: () => this.getState().open});
 
     this.setHandler('OPEN', function handleOpen(state, action) {
       return { ...state, open: true };
     });
   }
 
-  isOpen() {
-    return this.getState().open;
-  }
-
-  open() {
+  openDrawer() {
     this.dispatch(this.createAction('OPEN')());
   }
 }
@@ -158,32 +148,29 @@ export default class DrawerApi extends Api {
 
 Note that `handleOpen` returns a *new* object. We *never* mutate the existing state, but always
 either return it unchanged, or return a new object. We initialize the new object with the current
-state using the ES6 spread operator `...` to copy all state properties to the new object, then
+state using the ES6 spread operator `...` to copy all state properties to the new object. Then we
 overwrite the `open` property with the new value. Copying the current state is not strictly needed
 in this example as there are no other properties, but writing your code like this ensures it will
-keep working when you decide to add more state properties later.
+keep working when you decide to add more state properties later, or when the class is derived from.
 
 #### Finishing up our first Api
-Let's add a `close` command to finish our first Api. We'll also use arrow functions to make the
+Let's add a close command to finish our first Api. We'll also use arrow functions to make the
 code a bit more elegant:
 
 ```js
 export default class DrawerApi extends Api {
   constructor(state = { open: false }) {
     super(state);
+	Object.defineProperty(this, 'open', {enumerable:true, get: () => this.getState().open});
     this.addHandler('OPEN', (state, action) => ({ ...state, open: true }));
     this.addHandler('CLOSE', (state, action) => ({ ...state, open: false }));
   }
 
-  isOpen() {
-    return this.getState().open;
-  }
-
-  open() {
+  openDrawer() {
     this.dispatch(this.createAction('OPEN')());
   }
 
-  close() {
+  closeDrawer() {
     this.dispatch(this.createAction('CLOSE')());
   }
 }
@@ -205,18 +192,18 @@ a Redux store, this is done automatically by the Redux store.
 Now that we have an initialized Api, we can use it:
 
 ```js
-console.assert(api.isOpen() === false, 'Initially, the drawer should be closed');
-api.open();
-console.assert(api.isOpen() === true, 'After calling open(), the drawer should be open');
-api.close();
-console.assert(api.isOpen() === false, 'After calling close(), the drawer should be closed');
+console.assert(api.open === false, 'Initially, the drawer should be closed');
+api.openDrawer();
+console.assert(api.open === true, 'After calling openDrawer(), the drawer should be open');
+api.closeDrawer();
+console.assert(api.open === false, 'After calling closeDrawer(), the drawer should be closed');
 ```
 
 Because the `Api` constructor accepts a state argument, we can also initialize it manually:
 
 ```js
-const leftDrawer = new DrawerApi({open: true});
-console.assert(leftDrawer.isOpen() === true, 'The left drawer should be open');
+const leftDrawer = new DrawerApi({open: true}).init();
+console.assert(leftDrawer.open === true, 'The left drawer should be open');
 ```
 
 
@@ -256,8 +243,8 @@ That's it! `app` now automatically has a state tree that looks like this:
 We can use `app` like this:
 
 ```js
-app.leftDrawer.open();
-console.assert(app.leftDrawer.isOpen() === true, 'The left drawer should be opened');
+app.leftDrawer.openDrawer();
+console.assert(app.leftDrawer.open === true, 'The left drawer should be opened');
 ```
 
 #### Action types are namespaced
@@ -267,7 +254,7 @@ the same naming conventions and are aware of the (state) hierarchy via the link 
 to a parent Api and, if it's set, prepends the parent Api's name and a slash to the `actionType`
 before passing it on to it's parent. So in the example above, when we called
 ```js
-appApi.leftDrawer.open()
+appApi.leftDrawer.openDrawer()
 ```
 it actually resulted in an action being created with `actionType` equal to
 ```js
@@ -385,15 +372,18 @@ Easy isn't it?
 
 ### Link the top-level Api to a Redux store
 
-Until now, Redux never came into play. And in fact you don't need it. `redux-apis` has no runtime
-dependency on redux and can actually be used without Redux itself! The handlers you registered
-are reducers and `Api.handle` acts like a generic reducer routing the incoming actions to the
-registered handlers. This is very convenient for testing. But using Redux has many advantages.
-There is a lot of `middleware` available for it; small pieces of code that hook into the redux
-control flow. Things like [redux-thunk](https://github.com/gaearon/redux-thunk) to allow us to
-run code whenever an action is dispatched (for async handling for example) and
-[redux-logger](https://github.com/fcomb/redux-logger) that allows us to log all dispatched actions.
-Also, redux gives us a subscription model for listening to store events.
+Until now, Redux never came into play. And in fact you don't need it.
+`redux-apis` has no runtime dependency on redux and can actually be
+used without Redux itself! The handlers you registered are reducers
+and `Api.reducer` acts like a generic reducer routing the incoming
+actions to the registered handlers. This is very convenient for testing.
+But using Redux has many advantages. There is a lot of `middleware`
+available for it; small pieces of code that hook into the redux control
+flow. Things like [redux-thunk](https://github.com/gaearon/redux-thunk)
+to allow us to dispatch functions (for async handling for example) and
+[redux-logger](https://github.com/fcomb/redux-logger) that allows us to
+log all dispatched actions. Also, redux gives us a subscription model
+for listening to store events.
 
 Here is how you link an Api to a redux store:
 
@@ -407,8 +397,9 @@ import AppApi from './AppApi';
 const app = new AppApi();
 ```
 
-The cool thing is that `app.reducer` is a Redux reducer! It is auto-bound to the `app`
-instance, so we can just pass it along to `createStore` to make redux call it:
+The cool thing is that `app.reducer` is a Redux reducer! It is auto-bound
+to the `app` instance, so we can just pass it along to `createStore` to
+make redux call it:
 
 ```js
 // We can create a Redux store just like we always do. Just pass app.reducer!
@@ -416,9 +407,10 @@ let initialState = { some: 'state' }; // optional
 const store = createStore(app.reducer, initialState);
 ```
 
-Allmost there. In fact, our app has already been initialized with either the supplied
-initial state, or the initial state encoded in our Api components. We just need to link back
-the app object to the redux store, so dispatched actions will be routed to the redux store:
+Almost there. In fact, our app has already been initialized with either the
+supplied initial state, or the initial state encoded in our Api components.
+We just need to link back the app object to the redux store, so dispatched
+actions will be routed to the redux store:
 
 ```js
 link(store, app);
@@ -426,7 +418,7 @@ link(store, app);
 
 There you go!
 
-In this example we are linking the api reducer as the sole root reducer.
+In this example we are linking the app reducer as the sole root reducer.
 But in fact it's a reducer just like any other so we are able to combine
 it together with other reducers using redux's `combineReducers`, or any
 of the other methods available.
@@ -452,10 +444,10 @@ function that returns such a linker function based on a simple name:
 link(store, app, namedLink('app'));
 ```
 
-When we don't supply a third argument to `link`, the default `apiLink` is used. It just
-tries to find the child object among the parent's properties and then uses the name of
-that property as the key of the state slice. We can use this fact to simplify the above
-code to:
+When we don't supply a third argument to `link`, the default `apiLink` is used.
+It just tries to find the child object among the parent's properties and then
+uses the name of that property as the key of the state slice. We can use this
+fact to simplify the above code to:
 
 ```js
 // link(store, app, namedLink('app'));
@@ -465,10 +457,10 @@ store.app = link(store, app);
 // is on a property named 'app' on the parent object.
 ```
 
-We are currently using the vanilla `createStore` from redux, but we could boost that
-with middleware in exactly the same way we always do with redux. `redux-api` is just
-another component, latching onto the redux store with a plain old reducer function.
-Simple!
+We are currently using the vanilla `createStore` from redux, but we could
+boost that with middleware in exactly the same way we always do with redux.
+`redux-api` is just another component, latching onto the redux store with a
+plain old reducer function. Simple!
 
 
 ### Use redux-apis with React components
@@ -481,18 +473,106 @@ to it's Api instance, making connecting a Redux Api instance to a
 React component as simple as:
 
 ```js
-class AppApi extends Api {someFunc(){}}
-const app = new AppApi({someState:'some state'});
+import React, { Component } from 'react';
+import { connect } from 'react-redux';
+import app from './app'; // exports some Api instance
 
 @connect(app.connector)
 class App extends React.Component {
   render() {
-	const { someState, api } = this.props;
-	// someState === 'some state'
-    // typeof api.someFunc == 'function'
+    // when we get here, `connect` will have called `app.connector`, which will
+    // have made all enumerable properties of `app` available in `this.props`
+    const { some, api, properties } = this.props;
+  }
+}
+```js
+
+`app.connector` returns an object with the enumerable properties from `app` in
+it, making them available for use in the React component. But by default, Api
+instances have no enumerable properties. So in order to have the properties
+`some`, `api` and `properties` from the example above be added to props, we should
+make them available on our Api. As an example, let us implement `./app.js` from
+the example above:
+
+```js
+import Api from 'redux-apis';
+export class AppApi extends Api {
+  constructor(state = {some:'initial', api:'state', properties:'values'}) {
+    super(state);
+	defineProperty(this, 'some', {enumerable:true, get:()=>this.getState().some});
+	defineProperty(this, 'api', {enumerable:true, get:()=>this.getState().api});
+	defineProperty(this, 'properties', {enumerable:true, get:()=>this.getState().properties});
   }
 }
 ```
+
+This is a very simple example, but the use of enumerable properties will both
+give us fine grained control on the one hand, as well as very convenient and
+natural use on the other hand. For example, manually passing all enumerable
+properties of an instance of `DrawerApi`, to a React component named `Drawer`
+is as simple as:
+
+```js
+import React, { Component } from 'react';
+import Drawer from './components/Drawer';
+import DrawerApi from './components/Drawer/api';
+
+const drawer = new DrawerApi().init();
+
+class App extends Component {
+  render() {
+    return <Drawer {...drawer}>;
+	// equavalent to
+	// return <Drawer open={drawer.open} />
+  }
+}
+```
+
+I've found that many React components accept event handlers for things like
+some button being pressed. Assume our React `Drawer` component accepts a
+listener for when the darkened background is clicked in order to close the
+drawer, and that it has a property `onCancel` that can be used to set that
+listener. Knowing this, we can change our DrawerApi to reflect this:
+
+```js
+export default class DrawerApi extends Api {
+  constructor(state = { open: false }) {
+    super(state);
+	Object.defineProperty(this, 'open', {enumerable:true, get: () => this.getState().open});
+
+	// Add a property `onCancel`, which is a version of `closeDrawer`, auto-bound to `this`
+	Object.defineProperty(this, 'onCancel', {enumerable:true, value: this.closeDrawer.bind(this)});
+
+    this.addHandler('OPEN', (state, action) => ({ ...state, open: true }));
+    this.addHandler('CLOSE', (state, action) => ({ ...state, open: false }));
+  }
+
+  openDrawer() {
+    this.dispatch(this.createAction('OPEN')());
+  }
+
+  closeDrawer() {
+    this.dispatch(this.createAction('CLOSE')());
+  }
+}
+```
+
+Now, this line of code in the React `App` component will pass both the `open` and `onCancel`
+properties to the React `Drawer` component:
+
+```js
+<Drawer {...drawer}>;
+```
+
+I think you can that in this manner we can easily create Api objects that are loosely coupled
+to their counterpart React components, but still integrate with them very nicely.
+
+**NOTE**: In versions of redux-apis prior to v1.1.0, `connector` used to return an object
+containing the api state plus a property `api`, referencing the Api object itself. From 1.1.0
+going forward, the enumerable properties of the Api object are being *added* to this. This
+will continue to be like this in the 1.x branch, but when version 2.x arrives, the old behavior
+will be removed and only the enumerable properties will remain. So consider the old behavior to
+be deprecated.
 
 
 ### Scoped isomorphic fetch with redux-fetch-api
@@ -566,10 +646,7 @@ class MyAsync extends Async {
   constructor(state = MyAsync.INITIAL_STATE) {
     super(state);
     this.setHandler('SET_RESULT', (state, action) => ({...state, result:action.payload}));
-  }
-
-  result() {
-    return this.getState().result;
+	Object.defineProperty(this, 'result', {enumerable:true, get:()=>this.getState().result});
   }
 
   setResult(result) {
@@ -714,23 +791,23 @@ Then, start a webpack development server by invoking
 ```sh
 npm run examples-dev
 
-> redux-apis@0.10.0 examples-dev C:\ws\redux-apis
-> webpack-dev-server --context examples --output-file-name examples.js "mocha!./index.jsx" --content-base examples --port 8889
+> redux-apis@1.1.0 examples-dev c:\ws\redux-apis
+> webpack-dev-server --context examples --output-filename redux-apis.examples.js "mocha!./index.jsx" --content-base examples --port 8889
 
 http://localhost:8889/webpack-dev-server/
 webpack result is served from /
-content is served from C:\ws\redux-apis\examples
-Hash: 787073c1aebbf09f2440
-Version: webpack 1.12.11
-Time: 8784ms
-            Asset    Size  Chunks             Chunk Names
-    redux-apis.js  570 kB       0  [emitted]  main
-redux-apis.js.map  693 kB       0  [emitted]  main
+content is served from c:\ws\redux-apis\examples
+Hash: 3dfff65b899455e3b0c9
+Version: webpack 1.12.12
+Time: 2531ms
+                     Asset    Size  Chunks             Chunk Names
+    redux-apis.examples.js  579 kB       0  [emitted]  main
+redux-apis.examples.js.map  700 kB       0  [emitted]  main
 webpack: bundle is now VALID.
 ```
-<sup><sub>(Don't worry about those file sizes, that is due to the debug
+<sub>(Don't worry about those file sizes, that is due to the debug
 / hot reloading code. `redux-apis.min.js` weighs in at just ~2kB
-minified and gzipped)</sub></sup>
+minified and gzipped)</sub>
 
 Point your browser to http://localhost:8889/webpack-dev-server/ and you
 should see the mocha test suite, with all tests passing.

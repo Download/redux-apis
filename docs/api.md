@@ -1,4 +1,4 @@
-﻿# API documentation for redux-apis v1.x
+﻿# API documentation for redux-apis v1.1+
 
 * [#class-api](class Api)
    * [#constructor-state------](constructor(state = {}))
@@ -195,17 +195,35 @@ Default selector function, auto-bound to this Api object, for use i.c.w.
 
 ```js
 import React, { Component } from 'react';
+import { createStore } from 'redux';
+import Api, { link } from 'redux-apis';
 import { connect } from 'react-redux';
-import app from 'components/App/api';
+
+class AppApi extends Api {
+  constructor(state = {myFlag:false}) {
+    super(state);
+	this.setHandler('SET_FLAG', (state, action) => ({ ...state, flag: action.payload.flag }));
+    Object.defineProperty(this, 'flag', {enumerable:true, get:()=>this.getState().myFlag});
+    Object.defineProperty(this, 'toggle', {enumerable:true, value:this.toggleFlag.bind(this)});
+  }
+  setFlag(value) {
+    return this.dispatch(this.createAction('SET_FLAG')(value));
+  }
+  toggleFlag() {
+    return this.dispatch(this.createAction('SET_FLAG')(!this.flag));
+  }
+}
+const app = new AppApi();
+const store = createStore(app.reducer);
+link(store, app);
 
 @connect(app.connector)
 export class App extends Component {
 	render() {
-		// app state and a reference to the app object itself are available here in `this.props`
-		const { myFlag, api, children } = this.props;
+		// all enumerable properties from app are available here in `this.props`
+		const { flag, toggle, children } = this.props;
 		return (
-			<div className={myFlag ? 'visible' : ''}
-					onClick={() => api.myClickHandler}>
+			<div className={flag ? 'my-flag' : ''} onClick={toggle}>
 				{children}
 			</div>
 		)
@@ -220,6 +238,7 @@ If you don't want to use that yet, you could do this instead:
 class App extends Component { ... }
 export connect(app.connector)(App);
 ```
+
 
 ### .reducer(state, action)
 

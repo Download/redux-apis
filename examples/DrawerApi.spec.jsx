@@ -18,32 +18,32 @@ describe('DrawerApi', () => {
 		expect(drawer.getState().open).to.equal(true);
 	});
 
-	it('has methods to inspect it\'s state slice', () => {
+	it('has properties to inspect it\'s state slice', () => {
 		let drawer = new DrawerApi();
-		expect(drawer).to.have.property('isOpen');
-		expect(drawer.isOpen).to.be.a('function');
+		expect(drawer).to.have.property('open');
+		expect(drawer.open).to.equal(false);
 	});
 
 	it('has methods to dispatch actions to manipulate it\'s state slice', () => {
 		let drawer = new DrawerApi();
-		expect(drawer).to.have.property('open');
-		expect(drawer.open).to.be.a('function');
-		expect(drawer).to.have.property('close');
-		expect(drawer.close).to.be.a('function');
+		expect(drawer).to.have.property('openDrawer');
+		expect(drawer.openDrawer).to.be.a('function');
+		expect(drawer).to.have.property('closeDrawer');
+		expect(drawer.closeDrawer).to.be.a('function');
 	});
 
-	describe('isOpen', () => {
+	describe('.open', () => {
 		it('returns the value of the property `open` in the state slice', () => {
 			let drawer = new DrawerApi({open:true});
-			expect(drawer.isOpen()).to.equal(true);
-			expect(drawer.isOpen()).to.equal(drawer.getState().open);
+			expect(drawer.open).to.equal(true);
+			expect(drawer.open).to.equal(drawer.getState().open);
 			drawer = new DrawerApi();
-			expect(drawer.isOpen()).to.equal(false);
-			expect(drawer.isOpen()).to.equal(drawer.getState().open);
+			expect(drawer.open).to.equal(false);
+			expect(drawer.open).to.equal(drawer.getState().open);
 		});
 	});
 
-	describe('open', () => {
+	describe('.openDrawer()', () => {
 		class TestOpen extends Api {
 			constructor(state) {
 				super(state);
@@ -73,17 +73,17 @@ describe('DrawerApi', () => {
 		it('creates an action \'OPEN\' and dispatches it to the parent api', () => {
 			const test = new TestOpen({drawer: {open:false}});
 			expect(test.drawer.getState().open).to.equal(false);
-			test.drawer.open();
+			test.drawer.openDrawer();
 		});
 
-		it('results in the `open` flag being set to `true`', () => {
+		it('results in the `open` property being set to `true`', () => {
 			const test = new TestOpen({drawer: {open:false}});
-			test.drawer.open();
-			expect(test.drawer.getState().open).to.equal(true);
+			test.drawer.openDrawer();
+			expect(test.drawer.open).to.equal(true);
 		});
 	});
 
-	describe('close', () => {
+	describe('.closeDrawer()', () => {
 		class TestClose extends Api {
 			constructor(state={}) {
 				super(state);
@@ -112,14 +112,14 @@ describe('DrawerApi', () => {
 
 		it('creates an action \'CLOSE\' and dispatches it to the parent api', () => {
 			let test = new TestClose({drawer: {open:true}});
-			expect(test.drawer.getState().open).to.equal(true);
-			test.drawer.close();
+			expect(test.drawer.open).to.equal(true);
+			test.drawer.closeDrawer();
 		});
 
-		it('results in the `open` flag being set to `false`', () => {
+		it('results in the `open` property being set to `false`', () => {
 			let test = new TestClose({drawer: {open:true}});
-			test.drawer.close();
-			expect(test.drawer.getState().open).to.equal(false);
+			test.drawer.closeDrawer();
+			expect(test.drawer.open).to.equal(false);
 		});
 	});
 });

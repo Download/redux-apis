@@ -3,19 +3,16 @@
 export default class DrawerApi extends Api {
 	constructor(state = { open: false }) {
 		super(state);
+		Object.defineProperty(this, 'open', {enumerable:true, get:()=>this.getState().open});
 		this.setHandler('OPEN', (state, action) => ({ ...state, open: true }));
 		this.setHandler('CLOSE', (state, action) => ({ ...state, open: false }));
 	}
 
-	isOpen() {
-		return this.getState().open;
-	}
-
-	open() {
+	openDrawer() {
 		this.dispatch(this.createAction('OPEN')());
 	}
 
-	close() {
+	closeDrawer() {
 		this.dispatch(this.createAction('CLOSE')());
 	}
 }
