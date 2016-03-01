@@ -855,6 +855,8 @@ My thanks goes out to these people. They are the giants on whose shoulders this 
 * [Andrew Clarke](https://github.com/acdlite) for [redux-actions](https://github.com/acdlite/redux-actions)
    and [flux-standard-action](https://github.com/acdlite/flux-standard-action), defining a convention
    for action objects that this library follows.
+* [Athan Clark](https://github.com/athanclark) for asking very good questions and contributing valueable
+   feedback, over Discord as well as the issue tracker. Thanks Athan!
 * [Tim Dorr](https://github.com/timdorr), [Ryan Florence](https://github.com/ryanflorence),
    [Michael Jackson](https://github.com/mjackson) and [Jimmy Jia](https://github.com/taion) for
    their awesome work on [react-router](https://github.com/rackt/react-router).
