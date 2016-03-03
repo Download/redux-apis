@@ -371,6 +371,34 @@ describe('Api', () => {
 			expect(test.api).to.equal(myApi);
 		});
 
+		it('returns an object with sub-objects for nested Apis, that change identity when the nested Api\'s state changes.', () => {
+			class SubApi extends Api {
+				constructor(state = {value:''}) {
+					super(state);
+					this.setHandler('SET', (state,{payload}) => ({...state, value:payload}));
+					Object.defineProperty(this, 'value', {enumerable:true, get:()=>this.getState().value});
+				}
+				set(value) {
+					return this.dispatch(this.createAction('SET')(value));
+				}
+			}
+			class ApiWithSubs extends Api {
+				constructor(state) {
+					super(state);
+					this.sub = link(this, new SubApi());
+				}
+			}
+			const myApi = new ApiWithSubs().init();
+			const prev = myApi.connector();
+			let curr = myApi.connector();
+			expect(curr).to.equal(prev);
+			expect(curr.sub).to.equal(prev.sub);
+			myApi.sub.set('test');
+			curr = myApi.connector();
+			expect(curr).to.not.equal(prev);
+			expect(curr.sub).to.not.equal(prev.sub);
+		});
+
 		it('can be used in combination with the @connect decorator from react-redux', () => {
 			class MyApi extends Api {
 				constructor(state = {message:'Hello, World!'}) {

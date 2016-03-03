@@ -79,7 +79,16 @@
 	}
 
 	connector(state, ownProps) {
-		return { ...ownProps, ...this.getState(), api:this, ...this };
+		const currentState = this.getState();
+		const result = currentState === this.connector.__prevState ?
+			this.connector.__prevResult :
+			{ ...ownProps, ...currentState, api:this, ...this };
+		for (let key in this) {
+			if (this[key] instanceof Api) {result[key] = this[key].connector(state, ownProps);}
+		}
+		this.connector.__prevState = currentState;
+		this.connector.__prevResult = result;
+		return result;
 	}
 }
 export default Api;
