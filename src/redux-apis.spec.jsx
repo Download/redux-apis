@@ -341,34 +341,38 @@ describe('Api', () => {
 	});
 
 	describe('.connector(state, ownProps)', () => {
+		class MyApi extends Api {
+			constructor(state) {
+				super(state);
+				Object.defineProperty(this, 'state', {enumerable:true,
+					get:() => this.getState().state
+				})
+			}
+		}
+
 		it('is a function available on instances of Api', () => {
-			const myApi = new Api();
+			const myApi = new MyApi();
 			expect(myApi.connector).to.be.a('function');
 		});
 
 		it('is auto-bound to it\'s Api instance', () => {
-			const myApi = new Api({state:'OK'});
-			const myApi2 = new Api({state:'WRONG'});
+			const myApi = new MyApi({state:'OK'});
+			const myApi2 = new MyApi({state:'WRONG'});
 			const test = myApi.connector.bind(myApi2)();
 			expect(test).to.be.an('object');
 			expect(test).to.have.a.property('state');
 			expect(test.state).to.equal('OK');
 		});
 
-		it('returns an object with this Api\'s state, `ownProps` and this Api\'s enumerable properties spread into it, and an `api` property referencing this Api', () => {
-			const myApi = new Api({state:'OK'});
+		it('returns an object with this Api\'s enumerable properties spread into it', () => {
+			const myApi = new MyApi({state:'OK'});
 			myApi.enumerable = 'prop';
-			const connect = myApi.connector;
-			const test = connect({},{own:'prop'});
+			const test = myApi.connector();
 			expect(test).to.be.an('object');
 			expect(test).to.have.a.property('state');
 			expect(test.state).to.equal('OK');
-			expect(test).to.have.a.property('own');
-			expect(test.own).to.equal('prop');
 			expect(test).to.have.a.property('enumerable');
 			expect(test.enumerable).to.equal('prop');
-			expect(test).to.have.a.property('api');
-			expect(test.api).to.equal(myApi);
 		});
 
 		it('returns an object with sub-objects for nested Apis, that change identity when the nested Api\'s state changes.', () => {
@@ -403,6 +407,9 @@ describe('Api', () => {
 			class MyApi extends Api {
 				constructor(state = {message:'Hello, World!'}) {
 					super(state);
+					Object.defineProperty(this, 'message', {enumerable:true,
+						get:() => this.getState().message
+					});
 				}
 			}
 

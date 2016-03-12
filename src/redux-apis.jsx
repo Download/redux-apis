@@ -80,14 +80,12 @@
 
 	connector(state, ownProps) {
 		const currentState = this.getState();
-		const result = currentState === this.connector.__prevState ?
-			this.connector.__prevResult :
-			{ ...ownProps, ...currentState, api:this, ...this };
+		const result = currentState === this.connector.__prevState ? this.connector.__prevResult : { ...this };
 		for (let key in this) {
 			if (this[key] instanceof Api) {result[key] = this[key].connector(state, ownProps);}
 		}
-		this.connector.__prevState = currentState;
-		this.connector.__prevResult = result;
+		Object.defineProperty(this.connector, '__prevState', {configurable:true, value:currentState});
+		Object.defineProperty(this.connector, '__prevResult', {configurable:true, value:result});
 		return result;
 	}
 }
