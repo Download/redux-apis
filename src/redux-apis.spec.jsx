@@ -29,7 +29,7 @@ describe('Api', () => {
 			expect(myApi.getState()).to.be.an('object');
 		});
 
-		it('accepts a state slice', () => {
+		it('can be called with some state slice', () => {
 			const myApi = new Api({my: 'state'});
 			expect(myApi).to.be.an.instanceOf(Api);
 		});
@@ -68,11 +68,13 @@ describe('Api', () => {
 			myApi.init();
 			expect(dispatched).to.equal(true);
 		});
+
 		it('returns `this` to allow for chaining', () => {
 			const myApi = new MyApi();
 			const returned = myApi.init();
 			expect(returned).to.equal(myApi);
 		});
+
 		it('results in `getState` returning the initial state', () => {
 			const myApi = new MyApi().init();
 			expect(myApi).to.have.a.property('getState');
@@ -82,6 +84,7 @@ describe('Api', () => {
 			expect(myApi.getState()).to.have.a.property('nested');
 			expect(myApi.getState().nested).to.equal('NESTED');
 		});
+
 		it('does not have to be called when using redux', () => {
 			const myApi = new MyApi();
 			const store = createStore(myApi.reducer);
@@ -151,12 +154,14 @@ describe('Api', () => {
 			const myApi = new MyApi();
 			expect(myApi.setHandler).to.be.a('function');
 		});
+
 		it('accepts an action type and a handler function', () => {
 			class MyApi extends Api {};
 			const myApi = new MyApi();
 			myApi.setHandler('TEST', function(){});
 			expect(myApi.__actionHandlers['TEST']).to.be.a('function');
 		});
+
 		it('results in the handler being called when an action of the given type is dispatched', () => {
 			let called = false;
 			class MyApi extends Api {};
@@ -165,6 +170,7 @@ describe('Api', () => {
 			myApi.dispatch(myApi.createAction('TEST')());
 			expect(called).to.equal(true);
 		});
+
 		it('results in the handler being passed the current state and action when called', () => {
 			let called = false;
 			class MyApi extends Api {};
@@ -189,12 +195,14 @@ describe('Api', () => {
 			const myApi = new MyApi();
 			expect(myApi.getHandler).to.be.a('function');
 		});
+
 		it('accepts an action type and returns any handler set for that action type', () => {
 			class MyApi extends Api {};
 			const myApi = new MyApi();
 			myApi.setHandler('TEST', function(){});
 			expect(myApi.__actionHandlers['TEST']).to.be.a('function');
 		});
+
 		it('returns `undefined` when no handler was set for the given action type', () => {
 			class MyApi extends Api {};
 			const myApi = new MyApi();
@@ -210,6 +218,7 @@ describe('Api', () => {
 		it('is a function available on instances of Api', () => {
 			expect(myApi.clearHandler).to.be.a('function');
 		});
+
 		it('accepts an action type', () => {
 			myApi.clearHandler('TEST');
 		});
@@ -337,7 +346,31 @@ describe('Api', () => {
 			expect(handlerCalled).to.equal(true);
 			expect(myApi.getState()).to.have.a.property('msg');
 			expect(myApi.getState().msg).to.equal('Some message');
-		})
+		});
+
+		it('returns the initial state for the Api object when given state is undefined', () => {
+			class MyApi extends Api {
+				constructor(state = {initial:'state'}){
+					super(state);
+					this.setHandler('SET', (state, action) => action.payload);
+				}
+				set(state) {
+					this.dispatch(this.createAction('SET')(state));
+				}
+			}
+
+
+			const api = new MyApi().init();
+			const state1 = api.getState();
+			expect(state1).to.be.an('object');
+			expect(state1).to.have.a.property('initial');
+			expect(state1.initial).to.equal('state');
+			api.set({initial: 'changed'});
+			const state2 = api.getState();
+			expect(state2.initial).to.equal('changed');
+			const state3 = api.reducer(undefined, {type:'unknown'});
+			expect(state3.initial).to.equal('state');
+		});
 	});
 
 	describe('.connector(state, ownProps)', () => {
@@ -435,6 +468,7 @@ describe('Api', () => {
 	});
 });
 
+
 describe('link(parent, child, link/*(parentState,childState)*/ )', () => {
 	it('can be used to link a child api to a parent api', () => {
 		class SubApi extends Api {};
@@ -448,6 +482,7 @@ describe('link(parent, child, link/*(parentState,childState)*/ )', () => {
 		expect(myApi).to.have.a.property('nested');
 		expect(myApi.nested.getState()).to.equal('test');
 	});
+
 	it('results in actions on the child api to be dispatched via the parent api', () => {
 		let dispatchCalled = false;
 		class SubApi extends Api {test(){this.dispatch(this.createAction('TEST')());}};
@@ -466,6 +501,7 @@ describe('link(parent, child, link/*(parentState,childState)*/ )', () => {
 		myApi.nested.test();
 		expect(dispatchCalled).to.equal(true);
 	});
+
 	it('accepts an optional `link` function to link the child state to the parent state', () => {
 		class SubApi extends Api {};
 		class MyApi extends Api {
@@ -480,6 +516,7 @@ describe('link(parent, child, link/*(parentState,childState)*/ )', () => {
 		expect(myApi.nested).to.be.an.instanceOf(SubApi);
 		expect(myApi.nested.getState()).to.equal(expected);
 	});
+
 	it('can be used to link an api to a redux store', () => {
 		class SubApi extends Api {constructor(state = {sub:'api'}){super(state);}};
 		class MyApi extends Api {
@@ -527,6 +564,7 @@ describe('link(parent, child, link/*(parentState,childState)*/ )', () => {
 		expect(store.getState().test).to.equal('MESSAGE');
 		expect(store.getState().test).to.equal(myApi.getState().test);
 	});
+
 	it('can be used to index state objects into a parent array', () => {
 		const indexLink = (idx) => (parentState, childState) => childState
 				? parentState[idx] = childState

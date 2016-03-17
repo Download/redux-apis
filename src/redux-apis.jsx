@@ -2,7 +2,8 @@
 	constructor(state = {}) {
 		Object.defineProperties(this, {
 			__actionHandlers: { value: {} },
-			__state: { value:state, writable:true },
+			__initialState: { value:state },
+			__getState: { value:() => state },
 			__dispatch: { value: (action) => {
 				if (typeof action == 'function') {return action(this.dispatch.bind(this), this.getState.bind(this));}
 				state = this.reducer(state, action);
@@ -25,7 +26,7 @@
 		if (this.getParent()) {
 			state = this.__link ? this.__link(this.getParent().getState()) : this.getParent().getState();
 		}
-		return state !== undefined ? state : this.__state;
+		return state !== undefined ? state : this.__getState();
 	}
 
 	getParent() {
@@ -61,7 +62,7 @@
 		const subAction = idx !== -1 && action.type.substring(0, idx);
 		let result = this.__actionHandlers[action.type]
 			? this.__actionHandlers[action.type].call(this, state, action)
-			: (state === undefined ? this.__state : undefined);
+			: (state === undefined ? this.__initialState : undefined);
 		const subs = Object.keys(this).filter(key => this[key] instanceof Api);
 		subs.forEach(sub => {
 			const act = sub !== subAction ? action : {...action, type:action.type.substring(idx + 1)};
@@ -75,12 +76,15 @@
 				this[sub].__link(result, subResult);
 			}
 		});
-		return this.__state = result || state;
+		return result === undefined ? state : result;
 	}
 
 	connector(state, ownProps) {
 		const currentState = this.getState();
-		const result = currentState === this.connector.__prevState ? this.connector.__prevResult : { ...this };
+		if (currentState === this.connector.__prevState) {
+			return this.connector.__prevResult;
+		}
+		const result = { ...this };
 		for (let key in this) {
 			if (this[key] instanceof Api) {result[key] = this[key].connector(state, ownProps);}
 		}
