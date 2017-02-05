@@ -56,18 +56,18 @@
     "babel-preset-stage-0": "^6.3.13",
     "babel-register": "^6.3.13",
     "chai": "^3.4.1",
-    "mocha": "^2.3.4",
-    "mocha-loader": "^0.7.1",
+    "mocha": "^3.2.0",
+    "mocha-loader": "^1.1.0",
     "path": "^0.12.7",
     "picolog": "^1.0.0",
-    "react": "^0.14.6",
-    "react-dom": "^0.14.6",
-    "react-redux": "^4.0.6",
+    "react": "^15.4.2",
+    "react-dom": "^15.4.2",
+    "react-redux": "^5.0.2",
     "redux": "^3.0.5",
-    "redux-thunk": "^1.0.3",
+    "redux-thunk": "^2.2.0",
     "source-map-support": "^0.4.0",
-    "webpack": "^1.12.11",
-    "webpack-dev-server": "^1.14.1"
+    "webpack": "^2.2.1",
+    "webpack-dev-server": "^2.3.0"
   },
   "dependencies": {}
 }

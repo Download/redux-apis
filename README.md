@@ -2,6 +2,8 @@
 
 # redux-apis <sub><sup>v1.1.1</sup></sub>
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/Download/redux-apis.svg)](https://greenkeeper.io/)
+
 **Helpers for creating Redux-aware APIs**
 
 
