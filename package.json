@@ -55,7 +55,7 @@
     "babel-preset-react": "^6.3.13",
     "babel-preset-stage-0": "^6.3.13",
     "babel-register": "^6.3.13",
-    "chai": "^3.4.1",
+    "chai": "^4.0.2",
     "mocha": "^3.2.0",
     "mocha-loader": "^1.1.0",
     "path": "^0.12.7",
